@@ -397,14 +397,25 @@ async def ai_query_memory(data: QueryRequest, current_user=Depends(get_current_u
 
     context = "\n\n---\n\n".join([f"**{d['title']}**\n{d['content'][:2000]}" for _, d in top_docs]) if top_docs else "No relevant documents found in knowledge base."
 
+    system_prompt = """You are an AI knowledge base assistant for GhostBoard AI. Answer questions using ONLY the provided context documents.
+
+Guidelines:
+- Be specific and reference actual content from the documents
+- Use clear markdown formatting (headers, bold, lists) for complex answers
+- If the context is insufficient, clearly state what is missing
+- Keep responses focused and actionable
+- Do not add generic advice outside the provided context"""
+
     messages = [
-        {"role": "system", "content": "You are an AI assistant with access to the user's personal knowledge base. Answer questions based on the provided context. If context is insufficient, clearly state what information is missing."},
-        {"role": "user", "content": f"""Context from knowledge base:
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": f"""Context documents from knowledge base:
 
 {context}
 
 ---
-Question: {data.query}"""}
+Question: {data.query}
+
+Answer based on the context above."""}
     ]
     return await stream_openrouter(messages)
 
@@ -577,6 +588,25 @@ async def delete_memory_doc(doc_id: str, current_user=Depends(get_current_user))
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Document not found")
     return {"message": "Deleted"}
+
+@api_router.post("/memory/context")
+async def get_memory_context(data: SearchRequest, current_user=Depends(get_current_user)):
+    """Returns ranked docs that match a query — used for pre-query source preview."""
+    query_words = [w for w in data.query.lower().split() if len(w) > 2]
+    if not query_words:
+        return {"docs": [], "total_searched": 0}
+    q = {"user_id": current_user["id"]}
+    if data.project_id:
+        q["project_id"] = data.project_id
+    docs = await db.memory_docs.find(q).to_list(200)
+    scored = []
+    for doc in docs:
+        score = sum(1 for w in query_words if w in doc.get("content", "").lower() or w in doc.get("title", "").lower())
+        if score > 0:
+            scored.append((score, doc))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    result = [{"id": d["id"], "title": d["title"], "source_type": d["source_type"], "score": s, "word_count": d.get("word_count", 0)} for s, d in scored[:data.limit]]
+    return {"docs": result, "total_searched": len(docs)}
 
 @api_router.post("/memory/search")
 async def search_memory_docs(data: SearchRequest, current_user=Depends(get_current_user)):
