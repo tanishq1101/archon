@@ -32,6 +32,20 @@ Developers and teams waste time on project planning, architecture decisions, and
 - `pages/RAGMemory.js` - Document management + AI query interface
 - `components/Navbar.js` - Glass-morphism navigation
 
+## Features Implemented (Phase 2 — 2026-02)
+
+### 5. AI Sprint Planner (NEW)
+- AI generates 15-25 sprint tasks from project description via OpenRouter
+- 4-column glassmorphism Kanban board: Backlog → In Progress → In Review → Done
+- HTML5 drag-and-drop with Framer Motion layout animations on card transitions
+- Task cards: priority color-coded left border + badges (type, priority, story points, sprint)
+- Sprint tabs filter view by sprint number with task count
+- Progress bar: done story points / total story points %
+- Manual task creation modal with all fields
+- Delete tasks inline
+- Cinematic AI generation overlay with pulsing rings animation
+- Animated empty state with pulsing branded icon
+
 ## Features Implemented (Phase 1 — 2026-02)
 
 ### 1. Authentication System

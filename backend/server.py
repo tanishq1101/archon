@@ -532,7 +532,7 @@ async def update_task(task_id: str, data: TaskUpdate, current_user=Depends(get_c
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     if update_data:
         await db.sprint_tasks.update_one({"id": task_id}, {"$set": update_data})
-    t = await db.sprint_tasks.find_one({"id": task_id})
+    t = await db.sprint_tasks.find_one({"id": task_id, "user_id": current_user["id"]})
     t["_id"] = str(t["_id"])
     return t
 
