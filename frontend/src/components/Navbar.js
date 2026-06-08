@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Sparkles, LayoutDashboard, Brain, Code2, Database, LogOut, Menu, X } from "lucide-react";
+import { Sparkles, LayoutDashboard, Brain, Code2, Database, LogOut, Menu, X, Layers } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const navLinks = [
@@ -9,6 +9,7 @@ const navLinks = [
     { path: "/architect", label: "AI Architect", icon: Brain },
     { path: "/cto", label: "CTO Console", icon: Code2 },
     { path: "/memory", label: "Memory", icon: Database },
+    { path: "/sprint", label: "Sprint", icon: Layers },
 ];
 
 export default function Navbar() {

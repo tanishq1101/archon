@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import Optional, List
-import os, logging, uuid, jwt, bcrypt, httpx, json
+import os, logging, uuid, jwt, bcrypt, httpx, json, re
 from datetime import datetime, timezone, timedelta
 
 ROOT_DIR = Path(__file__).parent
@@ -117,7 +117,50 @@ class QueryRequest(BaseModel):
     query: str
     project_id: Optional[str] = None
 
+class SprintGenerateRequest(BaseModel):
+    idea: str
+    blueprint: str = ""
+    team_size: int = 2
+    num_sprints: int = 3
+    sprint_duration: str = "2 weeks"
+    project_id: Optional[str] = None
+
+class TaskCreate(BaseModel):
+    title: str
+    description: str = ""
+    status: str = "todo"
+    priority: str = "medium"
+    story_points: int = 3
+    sprint: int = 1
+    type: str = "feature"
+    project_id: Optional[str] = None
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    story_points: Optional[int] = None
+    sprint: Optional[int] = None
+    type: Optional[str] = None
+
 # ========== AI UTILS ==========
+
+def _parse_json_tasks(content: str) -> list:
+    """Extract JSON task array from AI response, handles code blocks and raw JSON."""
+    m = re.search(r'```(?:json)?\s*(\[[\s\S]+?\])\s*```', content)
+    if m:
+        try:
+            return json.loads(m.group(1))
+        except Exception as e:
+            logger.warning(f"Code block parse failed: {e}")
+    m = re.search(r'(\[[\s\S]+\])', content)
+    if m:
+        try:
+            return json.loads(m.group(1))
+        except Exception as e:
+            logger.warning(f"Direct JSON parse failed: {e}")
+    return []
 
 async def stream_openrouter(messages: list, model: str = None):
     model = model or DEFAULT_MODEL
@@ -142,7 +185,7 @@ async def stream_openrouter(messages: list, model: str = None):
                     }
                 ) as response:
                     if response.status_code != 200:
-                        body = await response.aread()
+                        await response.aread()
                         yield f"data: {{\"choices\":[{{\"delta\":{{\"content\":\"Error: API returned {response.status_code}\"}}}}]}}\n\n"
                         yield "data: [DONE]\n\n"
                         return
@@ -364,6 +407,141 @@ async def ai_query_memory(data: QueryRequest, current_user=Depends(get_current_u
 Question: {data.query}"""}
     ]
     return await stream_openrouter(messages)
+
+# --- SPRINT PLANNER ---
+
+@api_router.post("/ai/sprint")
+async def generate_sprint(data: SprintGenerateRequest, current_user=Depends(get_current_user)):
+    await db.ai_queries.insert_one({
+        "user_id": current_user["id"], "type": "sprint",
+        "query": data.idea[:200], "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    system = """You are an expert Agile Sprint Planner for software projects. Generate a detailed sprint plan.
+
+Return ONLY a valid JSON array of task objects. No explanations, no markdown text, just the JSON array.
+
+Each task object must have exactly these fields:
+{
+  "title": "Action verb + specific task (max 60 chars)",
+  "description": "1-2 sentence description of what needs to be done",
+  "priority": "critical" or "high" or "medium" or "low",
+  "story_points": 1 or 2 or 3 or 5 or 8 or 13,
+  "sprint": <sprint number integer>,
+  "type": "feature" or "bug" or "chore" or "research",
+  "status": "todo"
+}
+
+Guidelines:
+- Generate 15-25 tasks total
+- Sprint 1 = foundation/setup, Sprint 2 = core features, Sprint 3 = polish/scale
+- Use Fibonacci story points reflecting complexity
+- Start every title with an action verb: Build, Create, Implement, Design, Set up, Configure, Add, Integrate"""
+
+    user_msg = f"""Project: {data.idea}
+Team size: {data.team_size} developer(s)
+Number of sprints: {data.num_sprints}
+Sprint duration: {data.sprint_duration}"""
+    if data.blueprint:
+        user_msg += f"\n\nProject Blueprint:\n{data.blueprint[:2000]}"
+    user_msg += "\n\nReturn the JSON array of tasks only."
+
+    try:
+        async with httpx.AsyncClient(timeout=90) as client:
+            resp = await client.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://ghostboard.ai",
+                    "X-Title": "GhostBoard AI"
+                },
+                json={"model": DEFAULT_MODEL, "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user_msg}
+                ], "stream": False, "max_tokens": 4096}
+            )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=500, detail=f"AI API error: {resp.status_code}")
+
+        content = resp.json()["choices"][0]["message"]["content"]
+        raw_tasks = _parse_json_tasks(content)
+        if not raw_tasks:
+            raise HTTPException(status_code=500, detail="AI did not return parseable tasks. Try again.")
+
+        saved = []
+        for t in raw_tasks:
+            task = {
+                "id": str(uuid.uuid4()),
+                "user_id": current_user["id"],
+                "project_id": data.project_id or "",
+                "title": str(t.get("title", "Untitled"))[:100],
+                "description": str(t.get("description", ""))[:500],
+                "status": "todo",
+                "priority": t.get("priority", "medium") if t.get("priority") in ["critical","high","medium","low"] else "medium",
+                "story_points": int(t.get("story_points", 3)),
+                "sprint": int(t.get("sprint", 1)),
+                "type": t.get("type", "feature") if t.get("type") in ["feature","bug","chore","research"] else "feature",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.sprint_tasks.insert_one(task)
+            task["_id"] = str(task["_id"])
+            saved.append(task)
+        return {"tasks": saved, "count": len(saved)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Sprint generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- TASKS CRUD ---
+
+@api_router.get("/tasks")
+async def list_tasks(project_id: Optional[str] = None, current_user=Depends(get_current_user)):
+    q = {"user_id": current_user["id"]}
+    if project_id:
+        q["project_id"] = project_id
+    tasks = await db.sprint_tasks.find(q).sort("sprint", 1).to_list(500)
+    for t in tasks:
+        t["_id"] = str(t["_id"])
+    return tasks
+
+@api_router.post("/tasks")
+async def create_task(data: TaskCreate, current_user=Depends(get_current_user)):
+    task = {
+        "id": str(uuid.uuid4()),
+        "user_id": current_user["id"],
+        "project_id": data.project_id or "",
+        "title": data.title,
+        "description": data.description,
+        "status": data.status,
+        "priority": data.priority,
+        "story_points": data.story_points,
+        "sprint": data.sprint,
+        "type": data.type,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.sprint_tasks.insert_one(task)
+    task["_id"] = str(task["_id"])
+    return task
+
+@api_router.put("/tasks/{task_id}")
+async def update_task(task_id: str, data: TaskUpdate, current_user=Depends(get_current_user)):
+    t = await db.sprint_tasks.find_one({"id": task_id, "user_id": current_user["id"]})
+    if not t:
+        raise HTTPException(status_code=404, detail="Task not found")
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if update_data:
+        await db.sprint_tasks.update_one({"id": task_id}, {"$set": update_data})
+    t = await db.sprint_tasks.find_one({"id": task_id})
+    t["_id"] = str(t["_id"])
+    return t
+
+@api_router.delete("/tasks/{task_id}")
+async def delete_task(task_id: str, current_user=Depends(get_current_user)):
+    result = await db.sprint_tasks.delete_one({"id": task_id, "user_id": current_user["id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return {"message": "Deleted"}
 
 # --- MEMORY ---
 

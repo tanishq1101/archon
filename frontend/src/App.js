@@ -8,6 +8,7 @@ import Dashboard from "@/pages/Dashboard";
 import ProjectArchitect from "@/pages/ProjectArchitect";
 import CTODashboard from "@/pages/CTODashboard";
 import RAGMemory from "@/pages/RAGMemory";
+import SprintPlanner from "@/pages/SprintPlanner";
 import "@/App.css";
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
                     <Route path="/architect" element={<ProtectedRoute><ProjectArchitect /></ProtectedRoute>} />
                     <Route path="/cto" element={<ProtectedRoute><CTODashboard /></ProtectedRoute>} />
                     <Route path="/memory" element={<ProtectedRoute><RAGMemory /></ProtectedRoute>} />
+                    <Route path="/sprint" element={<ProtectedRoute><SprintPlanner /></ProtectedRoute>} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </BrowserRouter>

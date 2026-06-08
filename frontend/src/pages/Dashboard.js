@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Brain, Code2, Database, Plus, ArrowRight, FolderOpen, Zap, TrendingUp, Activity } from "lucide-react";
+import { Brain, Code2, Database, Plus, ArrowRight, FolderOpen, Zap, TrendingUp, Activity, Layers } from "lucide-react";
 import axios from "axios";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/context/AuthContext";
@@ -10,6 +10,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const quickActions = [
     { label: "AI Project Architect", desc: "Generate a project blueprint from your idea", href: "/architect", icon: Brain, gradient: "from-purple-500 to-violet-600" },
+    { label: "AI Sprint Planner", desc: "AI Kanban board with drag-and-drop tasks", href: "/sprint", icon: Layers, gradient: "from-cyan-400 to-purple-500" },
     { label: "CTO Console", desc: "Get expert technical guidance and advice", href: "/cto", icon: Code2, gradient: "from-cyan-400 to-blue-500" },
     { label: "RAG Memory", desc: "Manage your AI knowledge base", href: "/memory", icon: Database, gradient: "from-violet-500 to-fuchsia-600" },
 ];
