@@ -1,89 +1,475 @@
-from fastapi import FastAPI, APIRouter
-from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request
+from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-import os
-import logging
+from dotenv import load_dotenv
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List
-import uuid
-from datetime import datetime, timezone
-
+from pydantic import BaseModel, Field
+from typing import Optional, List
+import os, logging, uuid, jwt, bcrypt, httpx, json
+from datetime import datetime, timezone, timedelta
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# MongoDB
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+_client = AsyncIOMotorClient(mongo_url)
+db = _client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
-app = FastAPI()
+# ========== SETTINGS ==========
+JWT_SECRET = os.environ.get("JWT_SECRET", "fallback-secret-key")
+JWT_ALGORITHM = "HS256"
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+DEFAULT_MODEL = os.environ.get("AI_MODEL", "deepseek/deepseek-chat")
 
-# Create a router with the /api prefix
+# ========== AUTH UTILS ==========
+
+def hash_password(password: str) -> str:
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+
+def create_access_token(user_id: str, email: str) -> str:
+    payload = {
+        "sub": user_id,
+        "email": email,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=24),
+        "type": "access"
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+async def get_current_user(request: Request):
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header[7:] if auth_header.startswith("Bearer ") else None
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        if payload.get("type") != "access":
+            raise HTTPException(status_code=401, detail="Invalid token type")
+        user = await db.users.find_one({"id": payload["sub"]})
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        user["_id"] = str(user["_id"])
+        user.pop("password_hash", None)
+        return user
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+# ========== MODELS ==========
+
+class RegisterRequest(BaseModel):
+    email: str
+    name: str
+    password: str
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class ProjectCreate(BaseModel):
+    title: str
+    description: str = ""
+    idea: str = ""
+    tech_stack: List[str] = []
+
+class ProjectUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    ai_blueprint: Optional[str] = None
+    tech_stack: Optional[List[str]] = None
+    status: Optional[str] = None
+
+class ArchitectRequest(BaseModel):
+    idea: str
+    tech_preferences: List[str] = []
+    team_size: int = 1
+    timeline: str = "4 weeks"
+    project_id: Optional[str] = None
+
+class CTORequest(BaseModel):
+    question: str
+    context: str = ""
+    project_id: Optional[str] = None
+    tech_stack: List[str] = []
+    category: str = "architecture"
+
+class MemoryDocCreate(BaseModel):
+    title: str
+    content: str
+    source_type: str = "text"
+    project_id: Optional[str] = None
+
+class SearchRequest(BaseModel):
+    query: str
+    project_id: Optional[str] = None
+    limit: int = 5
+
+class QueryRequest(BaseModel):
+    query: str
+    project_id: Optional[str] = None
+
+# ========== AI UTILS ==========
+
+async def stream_openrouter(messages: list, model: str = None):
+    model = model or DEFAULT_MODEL
+
+    async def generate():
+        try:
+            async with httpx.AsyncClient(timeout=120) as client:
+                async with client.stream(
+                    "POST",
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "https://ghostboard.ai",
+                        "X-Title": "GhostBoard AI"
+                    },
+                    json={
+                        "model": model,
+                        "messages": messages,
+                        "stream": True,
+                        "max_tokens": 4096
+                    }
+                ) as response:
+                    if response.status_code != 200:
+                        body = await response.aread()
+                        yield f"data: {{\"choices\":[{{\"delta\":{{\"content\":\"Error: API returned {response.status_code}\"}}}}]}}\n\n"
+                        yield "data: [DONE]\n\n"
+                        return
+                    async for line in response.aiter_lines():
+                        if line and line.startswith("data: "):
+                            yield f"{line}\n\n"
+        except Exception as e:
+            logger.error(f"OpenRouter stream error: {e}")
+            yield f"data: {{\"choices\":[{{\"delta\":{{\"content\":\"Stream error: {str(e)}\"}}}}]}}\n\n"
+            yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
+
+# ========== API ROUTER ==========
+
 api_router = APIRouter(prefix="/api")
 
+# --- AUTH ---
 
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+@api_router.post("/auth/register")
+async def register(data: RegisterRequest):
+    existing = await db.users.find_one({"email": data.email.lower()})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    user_id = str(uuid.uuid4())
+    user = {
+        "id": user_id,
+        "email": data.email.lower(),
+        "name": data.name,
+        "password_hash": hash_password(data.password),
+        "role": "user",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.users.insert_one(user)
+    token = create_access_token(user_id, data.email.lower())
+    return {"token": token, "user": {"id": user_id, "email": user["email"], "name": user["name"], "role": "user"}}
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+@api_router.post("/auth/login")
+async def login(data: LoginRequest):
+    user = await db.users.find_one({"email": data.email.lower()})
+    if not user or not verify_password(data.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = create_access_token(user["id"], user["email"])
+    return {"token": token, "user": {"id": user["id"], "email": user["email"], "name": user["name"], "role": user.get("role", "user")}}
 
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
+@api_router.get("/auth/me")
+async def me(current_user=Depends(get_current_user)):
+    return current_user
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
+# --- PROJECTS ---
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
+@api_router.get("/projects")
+async def list_projects(current_user=Depends(get_current_user)):
+    projects = await db.projects.find({"user_id": current_user["id"]}).sort("created_at", -1).to_list(100)
+    for p in projects:
+        p["_id"] = str(p["_id"])
+    return projects
 
-# Include the router in the main app
+@api_router.post("/projects")
+async def create_project(data: ProjectCreate, current_user=Depends(get_current_user)):
+    project = {
+        "id": str(uuid.uuid4()),
+        "user_id": current_user["id"],
+        "title": data.title,
+        "description": data.description,
+        "idea": data.idea,
+        "ai_blueprint": "",
+        "tech_stack": data.tech_stack,
+        "status": "ideation",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.projects.insert_one(project)
+    project["_id"] = str(project["_id"])
+    return project
+
+@api_router.get("/projects/{project_id}")
+async def get_project(project_id: str, current_user=Depends(get_current_user)):
+    p = await db.projects.find_one({"id": project_id, "user_id": current_user["id"]})
+    if not p:
+        raise HTTPException(status_code=404, detail="Project not found")
+    p["_id"] = str(p["_id"])
+    return p
+
+@api_router.put("/projects/{project_id}")
+async def update_project(project_id: str, data: ProjectUpdate, current_user=Depends(get_current_user)):
+    p = await db.projects.find_one({"id": project_id, "user_id": current_user["id"]})
+    if not p:
+        raise HTTPException(status_code=404, detail="Project not found")
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if update_data:
+        await db.projects.update_one({"id": project_id}, {"$set": update_data})
+    p = await db.projects.find_one({"id": project_id})
+    p["_id"] = str(p["_id"])
+    return p
+
+@api_router.delete("/projects/{project_id}")
+async def delete_project(project_id: str, current_user=Depends(get_current_user)):
+    result = await db.projects.delete_one({"id": project_id, "user_id": current_user["id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return {"message": "Deleted"}
+
+# --- AI ENDPOINTS ---
+
+@api_router.post("/ai/architect")
+async def ai_architect(data: ArchitectRequest, current_user=Depends(get_current_user)):
+    # Log query
+    await db.ai_queries.insert_one({
+        "user_id": current_user["id"], "type": "architect",
+        "query": data.idea[:200], "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    system = """You are an elite AI Project Architect for GhostBoard AI. Generate comprehensive, production-ready project blueprints.
+
+Structure your response with these sections using markdown:
+
+## Project Overview
+Brief vision, problem, solution
+
+## Recommended Tech Stack
+Technologies with justification
+
+## System Architecture
+Components and their interactions
+
+## Core MVP Features
+Top 5-7 features prioritized by impact
+
+## Database Schema
+Key collections/tables and relationships
+
+## API Design
+Key endpoints (REST or GraphQL)
+
+## Sprint Plan (4 sprints)
+Week-by-week deliverables
+
+## Potential Risks & Mitigations
+Top 3-5 risks
+
+## Success Metrics
+KPIs and milestones
+
+Be specific, actionable, and think like a Senior Principal Engineer."""
+
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": f"""Project Idea: {data.idea}
+
+Tech Preferences: {', '.join(data.tech_preferences) or 'None (recommend best options)'}
+Team Size: {data.team_size} developer(s)
+Timeline: {data.timeline}
+
+Generate a comprehensive project blueprint."""}
+    ]
+    return await stream_openrouter(messages)
+
+@api_router.post("/ai/cto")
+async def ai_cto(data: CTORequest, current_user=Depends(get_current_user)):
+    await db.ai_queries.insert_one({
+        "user_id": current_user["id"], "type": "cto",
+        "query": data.question[:200], "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    system = """You are an elite AI CTO and Principal Technical Advisor for GhostBoard AI.
+
+You provide expert technical guidance on:
+- System architecture and design patterns
+- Technology stack selection and evaluation  
+- Code quality, scalability, performance
+- Security best practices
+- DevOps and deployment strategies
+- Cost optimization and trade-offs
+
+Be direct, specific, and pragmatic. Use markdown formatting. Think like a battle-tested CTO who has shipped real products."""
+
+    context_str = f"\n\nProject Context: {data.context}" if data.context else ""
+    tech_str = f"\n\nCurrent Tech Stack: {', '.join(data.tech_stack)}" if data.tech_stack else ""
+
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": f"""Technical Question [{data.category.upper()}]: {data.question}{context_str}{tech_str}
+
+Provide expert CTO-level advice."""}
+    ]
+    return await stream_openrouter(messages)
+
+@api_router.post("/ai/query")
+async def ai_query_memory(data: QueryRequest, current_user=Depends(get_current_user)):
+    await db.ai_queries.insert_one({
+        "user_id": current_user["id"], "type": "rag",
+        "query": data.query[:200], "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    query_words = data.query.lower().split()
+    q = {"user_id": current_user["id"]}
+    if data.project_id:
+        q["project_id"] = data.project_id
+    docs = await db.memory_docs.find(q).to_list(100)
+
+    scored = []
+    for doc in docs:
+        score = sum(1 for w in query_words if w in doc.get("content", "").lower() or w in doc.get("title", "").lower())
+        if score > 0:
+            scored.append((score, doc))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    top_docs = scored[:3]
+
+    context = "\n\n---\n\n".join([f"**{d['title']}**\n{d['content'][:2000]}" for _, d in top_docs]) if top_docs else "No relevant documents found in knowledge base."
+
+    messages = [
+        {"role": "system", "content": "You are an AI assistant with access to the user's personal knowledge base. Answer questions based on the provided context. If context is insufficient, clearly state what information is missing."},
+        {"role": "user", "content": f"""Context from knowledge base:
+
+{context}
+
+---
+Question: {data.query}"""}
+    ]
+    return await stream_openrouter(messages)
+
+# --- MEMORY ---
+
+@api_router.get("/memory")
+async def list_memory_docs(project_id: Optional[str] = None, current_user=Depends(get_current_user)):
+    q = {"user_id": current_user["id"]}
+    if project_id:
+        q["project_id"] = project_id
+    docs = await db.memory_docs.find(q).sort("created_at", -1).to_list(200)
+    for d in docs:
+        d["_id"] = str(d["_id"])
+    return docs
+
+@api_router.post("/memory")
+async def create_memory_doc(data: MemoryDocCreate, current_user=Depends(get_current_user)):
+    doc = {
+        "id": str(uuid.uuid4()),
+        "user_id": current_user["id"],
+        "title": data.title,
+        "content": data.content,
+        "source_type": data.source_type,
+        "project_id": data.project_id,
+        "word_count": len(data.content.split()),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.memory_docs.insert_one(doc)
+    doc["_id"] = str(doc["_id"])
+    return doc
+
+@api_router.delete("/memory/{doc_id}")
+async def delete_memory_doc(doc_id: str, current_user=Depends(get_current_user)):
+    result = await db.memory_docs.delete_one({"id": doc_id, "user_id": current_user["id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {"message": "Deleted"}
+
+@api_router.post("/memory/search")
+async def search_memory_docs(data: SearchRequest, current_user=Depends(get_current_user)):
+    query_words = data.query.lower().split()
+    q = {"user_id": current_user["id"]}
+    if data.project_id:
+        q["project_id"] = data.project_id
+    docs = await db.memory_docs.find(q).to_list(500)
+    scored = []
+    for doc in docs:
+        score = sum(1 for w in query_words if w in doc.get("content", "").lower() or w in doc.get("title", "").lower())
+        if score > 0:
+            scored.append((score, doc))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    results = [d for _, d in scored[:data.limit]]
+    for d in results:
+        d["_id"] = str(d["_id"])
+    return results
+
+# --- STATS ---
+
+@api_router.get("/stats")
+async def get_stats(current_user=Depends(get_current_user)):
+    projects_count = await db.projects.count_documents({"user_id": current_user["id"]})
+    memory_count = await db.memory_docs.count_documents({"user_id": current_user["id"]})
+    ai_queries_count = await db.ai_queries.count_documents({"user_id": current_user["id"]})
+    recent_projects = await db.projects.find({"user_id": current_user["id"]}).sort("created_at", -1).to_list(5)
+    for p in recent_projects:
+        p["_id"] = str(p["_id"])
+    return {
+        "projects_count": projects_count,
+        "memory_count": memory_count,
+        "ai_queries_count": ai_queries_count,
+        "recent_projects": recent_projects
+    }
+
+# ========== APP ==========
+
+app = FastAPI(title="GhostBoard AI API", docs_url="/api/docs")
 app.include_router(api_router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+@app.on_event("startup")
+async def startup():
+    await db.users.create_index("email", unique=True)
+    await db.projects.create_index("user_id")
+    await db.memory_docs.create_index("user_id")
+    await db.ai_queries.create_index("user_id")
+
+    admin_email = os.environ.get("ADMIN_EMAIL", "admin@ghostboard.ai")
+    admin_password = os.environ.get("ADMIN_PASSWORD", "GhostBoard123!")
+    existing = await db.users.find_one({"email": admin_email})
+    if not existing:
+        await db.users.insert_one({
+            "id": str(uuid.uuid4()),
+            "email": admin_email,
+            "name": "Admin",
+            "password_hash": hash_password(admin_password),
+            "role": "admin",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        logger.info(f"Admin seeded: {admin_email}")
+    logger.info("GhostBoard AI backend started")
 
 @app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+async def shutdown():
+    _client.close()
