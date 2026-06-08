@@ -1,0 +1,80 @@
+{
+  "project_name": "GhostBoard AI",
+  "app_type": "saas_app",
+  "theme": "Dark",
+  "archetype": "7 (Electric & Neon) + 5 (Luxury) Hybrid",
+  "colors": {
+    "background": "#0A0A0C",
+    "surface": "rgba(255, 255, 255, 0.03)",
+    "surface_glass": "rgba(10, 10, 12, 0.6)",
+    "primary": "#8B5CF6",
+    "secondary": "#06B6D4",
+    "accent_gradient": "bg-gradient-to-r from-purple-500 via-indigo-500 to-cyan-400",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "#A1A1AA",
+    "border": "rgba(255, 255, 255, 0.08)",
+    "glow": "rgba(139, 92, 246, 0.15)"
+  },
+  "typography": {
+    "heading_font": "Outfit",
+    "body_font": "Manrope",
+    "mono_font": "JetBrains Mono",
+    "font_imports": "@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap');",
+    "h1": "font-outfit text-5xl sm:text-6xl tracking-tighter font-medium text-white",
+    "h2": "font-outfit text-3xl sm:text-4xl tracking-tight font-medium text-white",
+    "h3": "font-outfit text-xl sm:text-2xl tracking-tight font-medium text-white",
+    "body": "font-manrope text-base leading-relaxed text-zinc-400",
+    "labels": "font-manrope text-xs tracking-[0.2em] uppercase text-zinc-500"
+  },
+  "spacing_and_layout": {
+    "philosophy": "Generous Spacing Philosophy. Use p-8 or p-12 for major containers to give a premium feel.",
+    "landing_page_grid": "MODE A: The 'Tetris' Grid. Use gap-8 to gap-12. Asymmetrical layout mixing col-span-4, col-span-8 to create tension.",
+    "dashboard_grid": "MODE B: The 'Control Room' Grid. Dense, gap-4 to gap-6. h-full on children to stretch and fill.",
+    "borders": "Always include internal padding (p-6 or p-8) on bordered containers to prevent text collision."
+  },
+  "components": {
+    "navigation": "Crystal Glass style. backdrop-blur-xl bg-[#0A0A0C]/70 border-b border-white/10. Sticky z-50. Saturate-150.",
+    "buttons": {
+      "primary": "bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-medium hover:brightness-110 hover:shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all",
+      "secondary": "bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all backdrop-blur-md"
+    },
+    "cards": "Glassmorphism: bg-white/5 backdrop-blur-xl backdrop-saturate-150 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.12)]. Hover: -translate-y-1 shadow-lg border-white/20.",
+    "forms": "Dark inputs with bg-white/5 border-white/10 text-white. Focus: focus:ring-1 focus:ring-purple-500 focus:border-purple-500."
+  },
+  "motion": {
+    "hover_states": "Slight lift (-translate-y-1) and increased border opacity on cards.",
+    "transitions": "transition-all duration-300 ease-out",
+    "framer_motion_usage": "Use Framer Motion for scroll-triggered entrance animations (fade up), staggered lists in the dashboard, and page transitions. Never animate layout directly without motion wrapper."
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "Minimal, clean lines, stroke-width 1.5, primarily white or gradient-tinted."
+  },
+  "images": {
+    "hero_background": {
+      "url": "https://images.unsplash.com/photo-1635776063043-ab23b4c226f6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTZ8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMGRhcmslMjBwdXJwbGUlMjBjeWFuJTIwbmVvbiUyMGdyYWRpZW50fGVufDB8fHx8MTc4MDg5OTc2MXww&ixlib=rb-4.1.0&q=85",
+      "description": "Abstract dark purple cyan neon gradient background for hero section. Use with bg-black/50 overlay."
+    },
+    "feature_ai_architect": {
+      "url": "https://images.unsplash.com/photo-1614852206732-6728910dc175?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NTZ8MHwxfHNlYXJjaHwzfHxhYnN0cmFjdCUyMGRhcmslMjBwdXJwbGUlMjBjeWFuJTIwbmVvbiUyMGdyYWRpZW50fGVufDB8fHx8MTc4MDg5OTc2MXww&ixlib=rb-4.1.0&q=85",
+      "description": "Purple and blue light illustration representing the AI Project Architect feature."
+    },
+    "developer_dashboard": {
+      "url": "https://images.unsplash.com/photo-1773349807434-374473797148?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzB8MHwxfHNlYXJjaHwyfHxkZXZlbG9wZXIlMjBjb2RpbmclMjBkYXJrJTIwbW9kZXxlbnwwfHx8fDE3ODA4OTk3NjF8MA&ixlib=rb-4.1.0&q=85",
+      "description": "Developer coding in dark mode for CTO Dashboard reference."
+    }
+  },
+  "instructions_to_main_agent": [
+    "Build a cinematic SaaS landing page using Framer Motion for scroll-triggered animations.",
+    "Implement a dark glassmorphism dashboard (GhostBoard AI) for hackathon teams and developers. Focus heavily on a Linear/Vercel level of polish.",
+    "Use Shadcn UI for standard components but HEAVILY customize them by stripping default Vercel styles and injecting the dark glassmorphism styles provided in these guidelines.",
+    "For the Hero Section, overlay the background image with bg-black/50 or a strong radial gradient so the text remains highly accessible.",
+    "Never use pure black #000000; use the tinted #0A0A0C provided.",
+    "CRITICAL: All interactive and key informational elements MUST include a 'data-testid' attribute (e.g., data-testid='hero-cta-button').",
+    "Use 'Outfit' for headings, 'Manrope' for body text, and 'JetBrains Mono' for code/terminal blocks. Inject the font_imports string into index.css.",
+    "Avoid generic tailwind colors. Use the custom hex values provided in the colors section.",
+    "Implement 'Tracing Beam' or subtle neon borders for active elements like pricing cards or the AI CTO recommendation panels.",
+    "Do not use HTML inputs directly, use Shadcn Form, Input, Select, etc.",
+    "Do not hide navigation links behind a hamburger menu on desktop viewports."
+  ]
+}
