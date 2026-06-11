@@ -1,9 +1,16 @@
 import { useState, useCallback } from "react";
+import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL || ""}/api`;
 
-export function useAIStream() {
-    const [output, setOutput] = useState("");
+export function useAIStream(storageKey = null) {
+    const { getToken: getClerkToken } = useClerkAuth();
+    const [output, setOutput] = useState(() => {
+        if (storageKey) {
+            return localStorage.getItem(storageKey) || "";
+        }
+        return "";
+    });
     const [isStreaming, setIsStreaming] = useState(false);
     const [error, setError] = useState(null);
 
@@ -11,8 +18,23 @@ export function useAIStream() {
         setIsStreaming(true);
         setOutput("");
         setError(null);
+        if (storageKey) {
+            localStorage.removeItem(storageKey);
+        }
 
-        const token = localStorage.getItem("ghostboard_token");
+        let token = null;
+        try {
+            token = await getClerkToken();
+            if (token) {
+                localStorage.setItem("ghostboard_token", token);
+            }
+        } catch (e) {
+            console.error("Failed to get fresh Clerk token for stream:", e);
+        }
+        if (!token) {
+            token = localStorage.getItem("ghostboard_token");
+        }
+        let accumulated = "";
         try {
             const response = await fetch(`${API}${endpoint}`, {
                 method: "POST",
@@ -26,12 +48,12 @@ export function useAIStream() {
             if (!response.ok) {
                 try {
                     const err = await response.json();
-                    setError(err.detail || "API error");
+                    setError(err.message || err.detail || "API error");
                 } catch {
                     setError("API error");
                 }
                 setIsStreaming(false);
-                return;
+                return "";
             }
 
             const reader = response.body.getReader();
@@ -52,31 +74,46 @@ export function useAIStream() {
                     const data = trimmed.slice(6);
                     if (data === "[DONE]") {
                         setIsStreaming(false);
-                        return;
+                        return accumulated;
                     }
                     try {
                         const parsed = JSON.parse(data);
                         if (parsed.error) {
                             setError(parsed.error?.message || "Stream error");
                             setIsStreaming(false);
-                            return;
+                            return accumulated;
                         }
                         const content = parsed.choices?.[0]?.delta?.content;
-                        if (content) setOutput((prev) => prev + content);
+                        if (content) {
+                            accumulated += content;
+                            setOutput((prev) => {
+                                const next = prev + content;
+                                if (storageKey) {
+                                    localStorage.setItem(storageKey, next);
+                                }
+                                return next;
+                            });
+                        }
                     } catch {}
                 }
             }
+            return accumulated;
         } catch (e) {
             setError(e.message);
+            return accumulated;
         } finally {
             setIsStreaming(false);
         }
-    }, []);
+    }, [storageKey, getClerkToken]);
 
     const clear = useCallback(() => {
         setOutput("");
         setError(null);
-    }, []);
+        if (storageKey) {
+            localStorage.removeItem(storageKey);
+        }
+    }, [storageKey]);
 
     return { output, isStreaming, error, stream, clear };
 }
+

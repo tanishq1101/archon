@@ -3,13 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Layers, Sparkles, Plus, Loader2, Brain, GripVertical,
     Zap, Eye, CheckCircle2, Trash2, X, ChevronDown, ChevronUp,
-    BarChart2, Circle, Flag
+    BarChart2, Circle, Flag, Edit
 } from "lucide-react";
 import axios from "axios";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/context/AuthContext";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL || ""}/api`;
 
 // ========== CONSTANTS ==========
 
@@ -36,9 +36,31 @@ const TYPE = {
 
 // ========== TASK CARD ==========
 
-function TaskCard({ task, onDelete, onDragStart, onDragEnd }) {
+function TaskCard({ task, onDelete, onDragStart, onDragEnd, onEdit }) {
     const p = PRIORITY[task.priority] || PRIORITY.medium;
     const t = TYPE[task.type] || TYPE.feature;
+    const [expanded, setExpanded] = useState(false);
+
+    // Parse description and AI rationale
+    const { mainDesc, aiRationale } = React.useMemo(() => {
+        const desc = task.description || "";
+        const parts = desc.split(/\*\*AI Rationale:\*\*|AI Rationale:/i);
+        if (parts.length > 1) {
+            return {
+                mainDesc: parts[0].trim(),
+                aiRationale: parts[1].trim()
+            };
+        }
+        return {
+            mainDesc: desc,
+            aiRationale: ""
+        };
+    }, [task.description]);
+
+    const handleCardClick = (e) => {
+        if (e.target.closest("button") || e.target.closest("svg")) return;
+        setExpanded(!expanded);
+    };
 
     return (
         <motion.div
@@ -51,26 +73,54 @@ function TaskCard({ task, onDelete, onDragStart, onDragEnd }) {
             draggable
             onDragStart={(e) => onDragStart(e, task.id)}
             onDragEnd={onDragEnd}
-            className={`group relative p-3.5 rounded-xl bg-white/[0.04] border border-white/[0.07] border-l-2 ${p.border} hover:border-white/[0.15] hover:bg-white/[0.06] transition-all duration-200 cursor-grab active:cursor-grabbing active:opacity-50 select-none`}
+            onClick={handleCardClick}
+            className={`group relative p-3.5 rounded-xl bg-white/[0.04] border border-white/[0.07] border-l-2 ${p.border} hover:border-white/[0.15] hover:bg-white/[0.06] transition-all duration-200 cursor-pointer select-none`}
             whileHover={{ y: -1 }}
         >
             {/* Badges row */}
             <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-manrope ${t.cls}`}>{t.label}</span>
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-manrope ${p.badge}`}>{p.label}</span>
-                <button onClick={() => onDelete(task.id)} data-testid={`delete-task-${task.id}`}
-                    className="ml-auto p-0.5 rounded text-zinc-700 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all duration-150">
-                    <Trash2 className="w-3 h-3" />
-                </button>
+                <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-150">
+                    <button onClick={(e) => { e.stopPropagation(); onEdit(task); }} data-testid={`edit-task-${task.id}`}
+                        className="p-0.5 rounded text-zinc-700 hover:text-purple-400 transition-colors">
+                        <Edit className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); onDelete(task.id); }} data-testid={`delete-task-${task.id}`}
+                        className="p-0.5 rounded text-zinc-700 hover:text-red-400 transition-colors">
+                        <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                </div>
             </div>
 
             {/* Title */}
             <p className="font-outfit text-sm font-medium text-white leading-snug mb-1.5">{task.title}</p>
 
             {/* Description */}
-            {task.description && (
-                <p className="font-manrope text-xs text-zinc-500 leading-relaxed line-clamp-2 mb-2.5">{task.description}</p>
+            {mainDesc && (
+                <p className={`font-manrope text-xs text-zinc-500 leading-relaxed mb-2.5 ${expanded ? "" : "line-clamp-2"}`}>{mainDesc}</p>
             )}
+
+            {/* AI Rationale callout */}
+            <AnimatePresence>
+                {expanded && aiRationale && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.18 }}
+                        className="overflow-hidden mb-2.5 p-2.5 rounded-lg bg-purple-500/[0.04] border border-purple-500/10"
+                    >
+                        <div className="flex items-center gap-1 mb-1 text-purple-300">
+                            <Brain className="w-3 h-3 animate-pulse" />
+                            <span className="text-[9px] uppercase tracking-wider font-semibold font-manrope">AI Rationale</span>
+                        </div>
+                        <p className="text-[11px] font-manrope text-zinc-500 leading-relaxed italic">
+                            {aiRationale}
+                        </p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Footer */}
             <div className="flex items-center gap-1.5 mt-1">
@@ -80,7 +130,14 @@ function TaskCard({ task, onDelete, onDragStart, onDragEnd }) {
                 <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/[0.1] border border-purple-500/20">
                     <span className="text-[10px] text-purple-400 font-manrope">S{task.sprint}</span>
                 </span>
-                <GripVertical className="ml-auto w-3 h-3 text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="ml-auto flex items-center gap-2">
+                    {aiRationale && (
+                        <span className="text-[9px] font-manrope text-purple-400 opacity-60 group-hover:opacity-100 transition-opacity">
+                            {expanded ? "Collapse" : "Rationale"}
+                        </span>
+                    )}
+                    <GripVertical className="w-3 h-3 text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
             </div>
         </motion.div>
     );
@@ -88,7 +145,7 @@ function TaskCard({ task, onDelete, onDragStart, onDragEnd }) {
 
 // ========== KANBAN COLUMN ==========
 
-function KanbanColumn({ col, tasks, isDragOver, onDragOver, onDragLeave, onDrop, onDelete, onDragStart, onDragEnd }) {
+function KanbanColumn({ col, tasks, isDragOver, onDragOver, onDragLeave, onDrop, onDelete, onDragStart, onDragEnd, onEdit }) {
     const totalPts = tasks.reduce((s, t) => s + (t.story_points || 0), 0);
     const isEmpty = tasks.length === 0;
 
@@ -122,6 +179,7 @@ function KanbanColumn({ col, tasks, isDragOver, onDragOver, onDragLeave, onDrop,
                             onDelete={onDelete}
                             onDragStart={onDragStart}
                             onDragEnd={onDragEnd}
+                            onEdit={onEdit}
                         />
                     ))}
                 </AnimatePresence>
@@ -157,6 +215,10 @@ function KanbanColumn({ col, tasks, isDragOver, onDragOver, onDragLeave, onDrop,
 export default function SprintPlanner() {
     const { getToken } = useAuth();
     const [tasks, setTasks] = useState([]);
+    const [projects, setProjects] = useState([]);
+    const [selectedProjectId, setSelectedProjectId] = useState("");
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(50);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
     const [genError, setGenError] = useState("");
@@ -166,25 +228,104 @@ export default function SprintPlanner() {
     const [draggedId, setDraggedId] = useState(null);
     const [draggedOver, setDraggedOver] = useState(null);
 
+    // Filters and search
+    const [searchQuery, setSearchQuery] = useState("");
+    const [typeFilter, setTypeFilter] = useState("all");
+    const [priorityFilter, setPriorityFilter] = useState("all");
+
+    // Edit task modal
+    const [showEditTask, setShowEditTask] = useState(false);
+    const [editForm, setEditForm] = useState({ id: "", title: "", description: "", priority: "medium", story_points: 3, sprint: 1, type: "feature", status: "todo" });
+    const [updatingTask, setUpdatingTask] = useState(false);
+
     const [genForm, setGenForm] = useState({ idea: "", team_size: 2, num_sprints: 3, sprint_duration: "2 weeks" });
     const [addForm, setAddForm] = useState({ title: "", description: "", priority: "medium", story_points: 3, sprint: 1, type: "feature" });
 
+    // Story Point Guide modal state
+    const [showSPGuide, setShowSPGuide] = useState(false);
+
+    // Sprint Goal state
+    const [sprintGoal, setSprintGoal] = useState("");
+    const [goalInput, setGoalInput] = useState("");
+    const [isEditingGoal, setIsEditingGoal] = useState(false);
+
     const authHeaders = useCallback(() => ({ Authorization: `Bearer ${getToken()}` }), [getToken]);
 
+    // Goal persistence logic
     useEffect(() => {
-        axios.get(`${API}/tasks`, { headers: authHeaders() })
+        if (activeSprint !== "all") {
+            const key = `ghostboard_goal_${selectedProjectId || "global"}_sprint_${activeSprint}`;
+            const savedGoal = localStorage.getItem(key);
+            if (savedGoal !== null) {
+                setSprintGoal(savedGoal);
+            } else {
+                let defaultGoal = "";
+                if (activeSprint === "1") {
+                    defaultGoal = "Setup development environment, define database schema relationships, and wire basic API auth routers.";
+                } else if (activeSprint === "2") {
+                    defaultGoal = "Build out core UI workflows, connect endpoints, and orchestrate standard client-side states.";
+                } else if (activeSprint === "3") {
+                    defaultGoal = "Polish UX micro-animations, write automated tests, and verify performance for deployment.";
+                } else {
+                    defaultGoal = `Refine sprint backlog items, address high-priority bugs, and prepare release documentation.`;
+                }
+                setSprintGoal(defaultGoal);
+            }
+            setIsEditingGoal(false);
+        }
+    }, [activeSprint, selectedProjectId]);
+
+    const handleSaveGoal = () => {
+        const key = `ghostboard_goal_${selectedProjectId || "global"}_sprint_${activeSprint}`;
+        localStorage.setItem(key, goalInput);
+        setSprintGoal(goalInput);
+        setIsEditingGoal(false);
+    };
+
+    // Fetch projects
+    useEffect(() => {
+        const fetchProjects = async () => {
+            try {
+                const token = getToken();
+                const { data } = await axios.get(`${API}/projects`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setProjects(data);
+            } catch (err) {
+                console.error("Failed to fetch projects:", err);
+            }
+        };
+        fetchProjects();
+    }, [getToken]);
+
+    // Fetch tasks scoped by project
+    useEffect(() => {
+        setLoading(true);
+        const url = selectedProjectId 
+            ? `${API}/tasks?project_id=${selectedProjectId}&limit=${limit}&offset=${(page - 1) * limit}`
+            : `${API}/tasks?limit=${limit}&offset=${(page - 1) * limit}`;
+        axios.get(url, { headers: authHeaders() })
             .then(({ data }) => setTasks(data))
             .catch(console.error)
             .finally(() => setLoading(false));
-    }, [authHeaders]);
+    }, [authHeaders, page, limit, selectedProjectId]);
 
-    // Derived state
+    // Derived state with client-side filtering and search
+    const filtered = tasks.filter((t) => {
+        const matchSprint = activeSprint === "all" || t.sprint === Number(activeSprint);
+        const matchType = typeFilter === "all" || t.type === typeFilter;
+        const matchPriority = priorityFilter === "all" || t.priority === priorityFilter;
+        const matchSearch = !searchQuery.trim() || 
+            t.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            (t.description && t.description.toLowerCase().includes(searchQuery.toLowerCase()));
+        return matchSprint && matchType && matchPriority && matchSearch;
+    });
+
     const sprints = [...new Set(tasks.map((t) => t.sprint))].sort((a, b) => a - b);
-    const filtered = activeSprint === "all" ? tasks : tasks.filter((t) => t.sprint === Number(activeSprint));
     const getColTasks = (status) => filtered.filter((t) => t.status === status);
 
-    const totalPts = tasks.reduce((s, t) => s + (t.story_points || 0), 0);
-    const donePts = tasks.filter((t) => t.status === "done").reduce((s, t) => s + (t.story_points || 0), 0);
+    const totalPts = filtered.reduce((s, t) => s + (t.story_points || 0), 0);
+    const donePts = filtered.filter((t) => t.status === "done").reduce((s, t) => s + (t.story_points || 0), 0);
     const progress = totalPts > 0 ? Math.round((donePts / totalPts) * 100) : 0;
 
     // Handlers
@@ -194,7 +335,10 @@ export default function SprintPlanner() {
         setGenerating(true);
         setGenError("");
         try {
-            const { data } = await axios.post(`${API}/ai/sprint`, genForm, { headers: authHeaders() });
+            const { data } = await axios.post(`${API}/ai/sprint`, {
+                ...genForm,
+                project_id: selectedProjectId || null
+            }, { headers: authHeaders() });
             setTasks((prev) => [...prev, ...data.tasks]);
             setShowGenerate(false);
             setGenForm((p) => ({ ...p, idea: "" }));
@@ -240,11 +384,53 @@ export default function SprintPlanner() {
         e.preventDefault();
         if (!addForm.title.trim()) return;
         try {
-            const { data } = await axios.post(`${API}/tasks`, { ...addForm, status: "todo" }, { headers: authHeaders() });
+            const { data } = await axios.post(`${API}/tasks`, { 
+                ...addForm, 
+                status: "todo",
+                project_id: selectedProjectId || ""
+            }, { headers: authHeaders() });
             setTasks((prev) => [...prev, data]);
             setShowAddTask(false);
             setAddForm({ title: "", description: "", priority: "medium", story_points: 3, sprint: 1, type: "feature" });
         } catch (e) { console.error(e); }
+    };
+
+    const handleEditTaskClick = (task) => {
+        setEditForm({
+            id: task.id,
+            title: task.title,
+            description: task.description || "",
+            priority: task.priority,
+            story_points: task.story_points,
+            sprint: task.sprint,
+            type: task.type,
+            status: task.status
+        });
+        setShowEditTask(true);
+    };
+
+    const handleUpdateTask = async (e) => {
+        e.preventDefault();
+        if (!editForm.title.trim() || updatingTask) return;
+        setUpdatingTask(true);
+        try {
+            const { data } = await axios.put(`${API}/tasks/${editForm.id}`, {
+                title: editForm.title,
+                description: editForm.description,
+                priority: editForm.priority,
+                story_points: editForm.story_points,
+                sprint: editForm.sprint,
+                type: editForm.type,
+                status: editForm.status
+            }, { headers: authHeaders() });
+
+            setTasks((prev) => prev.map((t) => (t.id === editForm.id ? data : t)));
+            setShowEditTask(false);
+        } catch (e) {
+            console.error("Failed to update task:", e);
+        } finally {
+            setUpdatingTask(false);
+        }
     };
 
     const handleClearAll = async () => {
@@ -291,6 +477,78 @@ export default function SprintPlanner() {
                             Generate with AI
                             {showGenerate ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                         </button>
+                    </div>
+                </motion.div>
+
+                {/* ─── Search & Filters Row ─── */}
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                    className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-6 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
+                    
+                    {/* Search Input */}
+                    <div className="relative">
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search tasks..."
+                            data-testid="task-search-input"
+                            className="input-glass text-xs pl-8 py-2 w-full"
+                        />
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500">
+                            🔍
+                        </span>
+                    </div>
+
+                    {/* Type Filter */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-xs text-zinc-500 font-manrope whitespace-nowrap">Type:</label>
+                        <select
+                            value={typeFilter}
+                            onChange={(e) => setTypeFilter(e.target.value)}
+                            data-testid="task-type-filter"
+                            className="input-glass text-xs py-2 w-full"
+                        >
+                            <option value="all" className="bg-[#0A0A0C]">All Types</option>
+                            <option value="feature" className="bg-[#0A0A0C]">Feature</option>
+                            <option value="bug" className="bg-[#0A0A0C]">Bug</option>
+                            <option value="chore" className="bg-[#0A0A0C]">Chore</option>
+                            <option value="research" className="bg-[#0A0A0C]">Research</option>
+                        </select>
+                    </div>
+
+                    {/* Priority Filter */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-xs text-zinc-500 font-manrope whitespace-nowrap">Priority:</label>
+                        <select
+                            value={priorityFilter}
+                            onChange={(e) => setPriorityFilter(e.target.value)}
+                            data-testid="task-priority-filter"
+                            className="input-glass text-xs py-2 w-full"
+                        >
+                            <option value="all" className="bg-[#0A0A0C]">All Priorities</option>
+                            <option value="critical" className="bg-[#0A0A0C]">Critical</option>
+                            <option value="high" className="bg-[#0A0A0C]">High</option>
+                            <option value="medium" className="bg-[#0A0A0C]">Medium</option>
+                            <option value="low" className="bg-[#0A0A0C]">Low</option>
+                        </select>
+                    </div>
+
+                    {/* Project Selector (Dropdown context) */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-xs text-zinc-500 font-manrope whitespace-nowrap">Project:</label>
+                        <select
+                            value={selectedProjectId}
+                            onChange={(e) => { setSelectedProjectId(e.target.value); setPage(1); }}
+                            data-testid="task-project-select"
+                            className="input-glass text-xs py-2 w-full"
+                        >
+                            <option value="" className="bg-[#0A0A0C]">All Projects Scope</option>
+                            {projects.map((proj) => (
+                                <option key={proj.id} value={proj.id} className="bg-[#0A0A0C]">
+                                    {proj.title}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 </motion.div>
 
@@ -428,7 +686,13 @@ export default function SprintPlanner() {
 
                     {/* Progress stats */}
                     {tasks.length > 0 && (
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <button
+                                onClick={() => setShowSPGuide(true)}
+                                className="px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.06] text-[10px] text-zinc-400 hover:text-white font-manrope transition-all mr-1.5 flex items-center gap-1 cursor-pointer"
+                            >
+                                💡 SP Guide
+                            </button>
                             <div className="flex items-center gap-2 text-xs font-manrope">
                                 <span className="text-zinc-500">{tasks.length} tasks</span>
                                 <span className="text-zinc-700">·</span>
@@ -444,6 +708,66 @@ export default function SprintPlanner() {
                         </div>
                     )}
                 </motion.div>
+
+                {/* Sprint Goal Banner */}
+                {activeSprint !== "all" && tasks.length > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-purple-950/20 via-cyan-950/15 to-transparent border border-purple-500/15 backdrop-blur-sm relative overflow-hidden"
+                    >
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                    <Flag className="w-4 h-4 text-purple-400" />
+                                    <span className="text-xs font-outfit font-medium text-purple-300 uppercase tracking-wider">
+                                        Sprint {activeSprint} Goal
+                                    </span>
+                                </div>
+                                {isEditingGoal ? (
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <input
+                                            type="text"
+                                            value={goalInput}
+                                            onChange={(e) => setGoalInput(e.target.value)}
+                                            onKeyDown={(e) => e.key === "Enter" && handleSaveGoal()}
+                                            placeholder="Define a goal for this sprint..."
+                                            className="input-glass text-sm py-1.5 px-3 flex-1 bg-white/[0.03]"
+                                            autoFocus
+                                        />
+                                        <button
+                                            onClick={handleSaveGoal}
+                                            className="px-3 py-1.5 rounded-lg bg-purple-500/25 border border-purple-500/40 text-purple-300 text-xs font-manrope hover:bg-purple-500/35 transition-all"
+                                        >
+                                            Save
+                                        </button>
+                                        <button
+                                            onClick={() => setIsEditingGoal(false)}
+                                            className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-zinc-400 text-xs font-manrope hover:bg-white/10 transition-all"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2 group flex-wrap">
+                                        <p className="font-manrope text-sm text-zinc-300 leading-relaxed italic">
+                                            {sprintGoal || "No sprint goal defined. Click Edit to establish objectives."}
+                                        </p>
+                                        <button
+                                            onClick={() => {
+                                                setGoalInput(sprintGoal);
+                                                setIsEditingGoal(true);
+                                            }}
+                                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-zinc-200 transition-all text-xs flex items-center gap-1 cursor-pointer"
+                                        >
+                                            <Edit className="w-3.5 h-3.5" /> Edit Goal
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
 
                 {/* ─── Kanban Board or Empty State ─── */}
                 {loading ? (
@@ -500,6 +824,41 @@ export default function SprintPlanner() {
                             />
                         ))}
                     </motion.div>
+                )}
+
+                {/* Pagination Controls */}
+                {tasks.length > 0 && (
+                    <div className="flex items-center justify-center gap-4 mt-8 font-manrope">
+                        <button
+                            disabled={page === 1}
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            className="px-4 py-2 rounded-xl bg-white/[0.04] border border-white/[0.07] text-zinc-400 hover:text-white disabled:opacity-40 disabled:hover:text-zinc-400 text-sm font-medium transition-all"
+                            data-testid="prev-page-btn"
+                        >
+                            Previous Page
+                        </button>
+                        <span className="text-sm text-zinc-400" data-testid="page-display">Page {page}</span>
+                        <button
+                            disabled={tasks.length < limit}
+                            onClick={() => setPage(p => p + 1)}
+                            className="px-4 py-2 rounded-xl bg-white/[0.04] border border-white/[0.07] text-zinc-400 hover:text-white disabled:opacity-40 disabled:hover:text-zinc-400 text-sm font-medium transition-all"
+                            data-testid="next-page-btn"
+                        >
+                            Next Page
+                        </button>
+                        
+                        <select
+                            value={limit}
+                            onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                            className="px-3 py-2 rounded-xl bg-[#0F0F13] border border-white/[0.07] text-zinc-400 text-sm font-medium focus:outline-none cursor-pointer"
+                            data-testid="limit-select"
+                        >
+                            <option value={10} className="bg-[#0A0A0C]">10 per page</option>
+                            <option value={20} className="bg-[#0A0A0C]">20 per page</option>
+                            <option value={50} className="bg-[#0A0A0C]">50 per page</option>
+                            <option value={100} className="bg-[#0A0A0C]">100 per page</option>
+                        </select>
+                    </div>
                 )}
             </main>
 
@@ -584,6 +943,150 @@ export default function SprintPlanner() {
                                     </button>
                                 </div>
                             </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ─── Edit Task Modal ─── */}
+            <AnimatePresence>
+                {showEditTask && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+                        onClick={(e) => e.target === e.currentTarget && setShowEditTask(false)}
+                        data-testid="edit-task-modal">
+                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                            className="w-full max-w-md p-6 rounded-2xl bg-[#0F0F13] border border-white/[0.1] shadow-[0_25px_50px_rgba(0,0,0,0.5)]">
+                            <div className="flex items-center justify-between mb-5">
+                                <h3 className="font-outfit text-lg font-medium text-white">Edit Task</h3>
+                                <button onClick={() => setShowEditTask(false)} data-testid="close-edit-modal-btn"
+                                    className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-all">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleUpdateTask} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-2">Title *</label>
+                                    <input value={editForm.title} onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))}
+                                        placeholder="Implement user authentication" required data-testid="edit-task-title-input"
+                                        className="input-glass" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-2">Description</label>
+                                    <textarea value={editForm.description}
+                                        onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
+                                        placeholder="Brief description of what needs to be done..." rows={2}
+                                        data-testid="edit-task-desc-input" className="input-glass resize-none text-sm" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-2">Priority</label>
+                                        <select value={editForm.priority}
+                                            onChange={(e) => setEditForm((p) => ({ ...p, priority: e.target.value }))}
+                                            data-testid="edit-task-priority-select" className="input-glass text-sm py-2.5">
+                                            {["critical", "high", "medium", "low"].map((v) => (
+                                                <option key={v} value={v} className="bg-[#0A0A0C] capitalize">{v.charAt(0).toUpperCase() + v.slice(1)}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-2">Type</label>
+                                        <select value={editForm.type}
+                                            onChange={(e) => setEditForm((p) => ({ ...p, type: e.target.value }))}
+                                            data-testid="edit-task-type-select" className="input-glass text-sm py-2.5">
+                                            {["feature", "bug", "chore", "research"].map((v) => (
+                                                <option key={v} value={v} className="bg-[#0A0A0C] capitalize">{v.charAt(0).toUpperCase() + v.slice(1)}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-2">
+                                            Story Points: <span className="text-purple-400">{editForm.story_points}</span>
+                                        </label>
+                                        <input type="range" min="1" max="13" value={editForm.story_points}
+                                            onChange={(e) => setEditForm((p) => ({ ...p, story_points: Number(e.target.value) }))}
+                                            data-testid="edit-story-points-slider" className="w-full accent-purple-500 mt-1" />
+                                        <div className="flex justify-between text-[10px] text-zinc-700 font-manrope"><span>1</span><span>13</span></div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-2">Sprint #</label>
+                                        <input type="number" min="1" max="10" value={editForm.sprint}
+                                            onChange={(e) => setEditForm((p) => ({ ...p, sprint: Number(e.target.value) }))}
+                                            data-testid="edit-task-sprint-input" className="input-glass text-sm py-2.5" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-2">Status</label>
+                                    <select value={editForm.status}
+                                        onChange={(e) => setEditForm((p) => ({ ...p, status: e.target.value }))}
+                                        data-testid="edit-task-status-select" className="input-glass text-sm py-2.5">
+                                        {["todo", "in_progress", "review", "done"].map((v) => (
+                                            <option key={v} value={v} className="bg-[#0A0A0C]">{v === "todo" ? "Backlog" : v === "in_progress" ? "In Progress" : v === "review" ? "In Review" : "Done"}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex gap-3 pt-1">
+                                    <button type="button" onClick={() => setShowEditTask(false)}
+                                        className="flex-1 py-2.5 rounded-xl btn-secondary text-sm">Cancel</button>
+                                    <button type="submit" disabled={updatingTask} data-testid="save-edit-task-btn"
+                                        className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-medium font-manrope text-sm hover:brightness-110 transition-all flex items-center justify-center gap-2">
+                                        {updatingTask ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Save Changes
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ─── Story Point Guide Modal ─── */}
+            <AnimatePresence>
+                {showSPGuide && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+                        onClick={() => setShowSPGuide(false)}>
+                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                            className="w-full max-w-md p-6 rounded-2xl bg-[#0F0F13] border border-white/[0.1] shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xl font-manrope">💡</span>
+                                    <h3 className="font-outfit text-lg font-medium text-white">Fibonacci Story Point Guide</h3>
+                                </div>
+                                <button onClick={() => setShowSPGuide(false)}
+                                    className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-all">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <p className="font-manrope text-xs text-zinc-400 mb-4 leading-relaxed">
+                                Story Points measure complexity, effort, and risk rather than hours. Here's a breakdown of the standard Agile scale:
+                            </p>
+                            <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1 scrollbar-ghost">
+                                {[
+                                    { pts: "1 SP", label: "Minor Tweak", desc: "Simple label, color change, or text adjustments. Low risk." },
+                                    { pts: "2 SP", label: "Simple Component", desc: "Isolated UI modifications, adding simple state, or minor styling edits." },
+                                    { pts: "3 SP", label: "Standard Feature", desc: "A standard API endpoint, db query, or functional component. Moderate risk." },
+                                    { pts: "5 SP", label: "Complex Logic", desc: "Orchestration across multiple components, backend schema changes, or authentication endpoints." },
+                                    { pts: "8 SP", label: "Major Feature", desc: "Intricate integration flow, complex data mappings, or multi-step checkout flows." },
+                                    { pts: "13 SP", label: "Epic / Architectural", desc: "Large architectural changes, system redesign, or deep third-party integrations. Should be broken down." }
+                                ].map((item) => (
+                                    <div key={item.pts} className="flex gap-3 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+                                        <span className="w-12 text-center text-xs font-semibold text-purple-400 font-jetbrains py-0.5 rounded bg-purple-500/10 border border-purple-500/10 flex-shrink-0 align-self-start">{item.pts}</span>
+                                        <div>
+                                            <p className="text-xs font-semibold text-white font-outfit">{item.label}</p>
+                                            <p className="text-[11px] text-zinc-500 leading-relaxed font-manrope mt-0.5">{item.desc}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </motion.div>
                     </motion.div>
                 )}

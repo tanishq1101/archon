@@ -2,14 +2,14 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Database, Plus, Search, Trash2, FileText, Globe, Code2, Loader2,
-    Upload, Sparkles, X, ChevronDown, ChevronUp, Copy, Check, Brain
+    Upload, Sparkles, X, ChevronDown, ChevronUp, Copy, Check, Brain, Edit
 } from "lucide-react";
 import axios from "axios";
 import Navbar from "@/components/Navbar";
 import { useAIStream } from "@/hooks/useAIStream";
 import { useAuth } from "@/context/AuthContext";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL || ""}/api`;
 
 const SOURCE_CONFIG = {
     text: {
@@ -56,7 +56,7 @@ function MarkdownContent({ text }) {
 
 // ─── Document card ───────────────────────────────────────────────────────────
 
-function DocCard({ doc, expanded, onToggle, onDelete, deletingId }) {
+function DocCard({ doc, expanded, onToggle, onDelete, deletingId, onEdit }) {
     const cfg = SOURCE_CONFIG[doc.source_type] || SOURCE_CONFIG.text;
     const [copied, setCopied] = useState(false);
     const isDeleting = deletingId === doc.id;
@@ -90,6 +90,13 @@ function DocCard({ doc, expanded, onToggle, onDelete, deletingId }) {
                     </p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onEdit(doc); }}
+                        data-testid={`edit-doc-${doc.id}`}
+                        className="p-1.5 rounded text-zinc-700 hover:text-purple-400 transition-colors"
+                    >
+                        <Edit className="w-3 h-3" />
+                    </button>
                     <button
                         onClick={(e) => { e.stopPropagation(); onDelete(doc.id); }}
                         disabled={isDeleting}
@@ -142,6 +149,99 @@ function DocCard({ doc, expanded, onToggle, onDelete, deletingId }) {
     );
 }
 
+// ─── Guided Templates ──────────────────────────────────────────────────────────
+
+const TEMPLATES = {
+    apiRef: {
+        label: "API Reference",
+        title: "REST API Endpoint Specifications",
+        source_type: "text",
+        content: `## REST API Specifications
+
+### Base URL
+\`https://api.myproject.com/v1\`
+
+### Endpoints
+
+#### 1. Authentication
+* **POST /auth/login** - Exchange email/password for JWT token
+* **POST /auth/register** - Create user profile
+* **GET /auth/me** - Fetch currently logged-in user profile (Requires Bearer Token)
+
+#### 2. Projects
+* **GET /projects** - List all projects for authenticated user
+* **POST /projects** - Create a new project blueprint
+* **DELETE /projects/:id** - Delete project
+
+### Error Responses
+* \`400 Bad Request\` - Missing or invalid fields
+* \`401 Unauthorized\` - Invalid or expired authentication token
+* \`403 Forbidden\` - Insufficient permissions for resource`,
+    },
+    styleGuide: {
+        label: "Style Guide",
+        title: "Frontend UI & Tailwind Guidelines",
+        source_type: "text",
+        content: `## Design System & Style Guide
+
+### Core Colors
+* **Primary (Deep Ink)**: \`#0A0A0C\` (Base background)
+* **Accent (Violet-Purple)**: \`#8B5CF6\` / \`#A78BFA\` (Gradients and primary actions)
+* **Secondary (Slate-Zinc)**: \`#18181B\` (Cards base)
+
+### Typography
+* **Headers**: Outfit (sans-serif)
+* **Body Text**: Manrope (sans-serif)
+* **Monospace**: JetBrains Mono (code view)
+
+### Coding Standards
+* Prefer clean functional React components using hooks.
+* Use Tailwind CSS for responsive styling.
+* Implement theme-aware HSL properties (light/dark mode compatibility).
+* Ensure glassmorphism overlays are frosted (backdrop-blur-sm, frosted borders).`,
+    },
+    dbSchema: {
+        label: "DB Schema",
+        title: "Database Relational Models",
+        source_type: "code",
+        content: `// DATABASE RELATION SCHEMA (PRISMA FORMAT)
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  projects  Project[]
+  createdAt DateTime @default(now())
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+  createdAt   DateTime @default(now())
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  status      String   @default("todo") // todo, in_progress, review, done
+  priority    String   @default("medium") // critical, high, medium, low
+  storyPoints Int      @default(3)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}`,
+    },
+};
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function RAGMemory() {
@@ -149,6 +249,8 @@ export default function RAGMemory() {
     const { output, isStreaming, error: streamError, stream, clear } = useAIStream();
 
     const [docs, setDocs] = useState([]);
+    const [projects, setProjects] = useState([]);
+    const [selectedProjectId, setSelectedProjectId] = useState("");
     const [loading, setLoading] = useState(true);
     const [typeFilter, setTypeFilter] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
@@ -156,10 +258,20 @@ export default function RAGMemory() {
     const [expandedId, setExpandedId] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
 
+    // Onboarding guide banner state
+    const [showOnboarding, setShowOnboarding] = useState(() => {
+        return localStorage.getItem("ghostboard_memory_onboarding_dismissed") !== "true";
+    });
+
     // Add doc modal
     const [showAdd, setShowAdd] = useState(false);
-    const [addForm, setAddForm] = useState({ title: "", content: "", source_type: "text" });
+    const [addForm, setAddForm] = useState({ title: "", content: "", source_type: "text", project_id: "" });
     const [adding, setAdding] = useState(false);
+
+    // Edit doc modal
+    const [showEdit, setShowEdit] = useState(false);
+    const [editForm, setEditForm] = useState({ id: "", title: "", content: "", source_type: "text", project_id: "" });
+    const [editing, setEditing] = useState(false);
 
     // Query panel
     const [aiQuery, setAiQuery] = useState("");
@@ -169,16 +281,47 @@ export default function RAGMemory() {
     const outputRef = useRef(null);
     const previewTimerRef = useRef(null);
 
+    const handleDismissOnboarding = () => {
+        localStorage.setItem("ghostboard_memory_onboarding_dismissed", "true");
+        setShowOnboarding(false);
+    };
+
+    const handleApplyTemplate = (template) => {
+        setAddForm({
+            title: template.title,
+            content: template.content,
+            source_type: template.source_type,
+            project_id: addForm.project_id
+        });
+    };
+
     const authHeaders = useCallback(() => ({ Authorization: `Bearer ${getToken()}` }), [getToken]);
 
     const fetchDocs = useCallback(() => {
-        axios.get(`${API}/memory`, { headers: authHeaders() })
+        setLoading(true);
+        const url = selectedProjectId ? `${API}/memory?project_id=${selectedProjectId}` : `${API}/memory`;
+        axios.get(url, { headers: authHeaders() })
             .then(({ data }) => setDocs(data))
             .catch((e) => console.error("fetchDocs error:", e))
             .finally(() => setLoading(false));
-    }, [authHeaders]);
+    }, [authHeaders, selectedProjectId]);
 
     useEffect(() => { fetchDocs(); }, [fetchDocs]);
+
+    useEffect(() => {
+        const fetchProjects = async () => {
+            try {
+                const token = getToken();
+                const { data } = await axios.get(`${API}/projects`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setProjects(data);
+            } catch (err) {
+                console.error("Failed to fetch projects:", err);
+            }
+        };
+        fetchProjects();
+    }, [getToken]);
 
     // Auto-scroll response
     useEffect(() => {
@@ -195,7 +338,7 @@ export default function RAGMemory() {
         if (!value.trim() || docs.length === 0) { setContextDocs([]); return; }
         previewTimerRef.current = setTimeout(() => {
             axios
-                .post(`${API}/memory/context`, { query: value, limit: 3 }, { headers: authHeaders() })
+                .post(`${API}/memory/context`, { query: value, limit: 3, project_id: selectedProjectId || null }, { headers: authHeaders() })
                 .then(({ data }) => setContextDocs(data.docs || []))
                 .catch(() => setContextDocs([]));
         }, 350);
@@ -223,7 +366,7 @@ export default function RAGMemory() {
         try {
             const { data } = await axios.post(
                 `${API}/memory/search`,
-                { query: searchQuery, limit: 20 },
+                { query: searchQuery, limit: 20, project_id: selectedProjectId || null },
                 { headers: authHeaders() }
             );
             setSearchResults(data);
@@ -250,8 +393,13 @@ export default function RAGMemory() {
         if (!addForm.title.trim() || !addForm.content.trim()) return;
         setAdding(true);
         try {
-            await axios.post(`${API}/memory`, addForm, { headers: authHeaders() });
-            setAddForm({ title: "", content: "", source_type: "text" });
+            await axios.post(`${API}/memory`, {
+                title: addForm.title,
+                content: addForm.content,
+                source_type: addForm.source_type,
+                project_id: addForm.project_id || null
+            }, { headers: authHeaders() });
+            setAddForm({ title: "", content: "", source_type: "text", project_id: "" });
             setShowAdd(false);
             fetchDocs();
         } catch (e) {
@@ -261,16 +409,52 @@ export default function RAGMemory() {
         }
     };
 
+    const handleEditClick = (doc) => {
+        setEditForm({
+            id: doc.id,
+            title: doc.title,
+            content: doc.content,
+            source_type: doc.source_type,
+            project_id: doc.project_id || ""
+        });
+        setShowEdit(true);
+    };
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        if (!editForm.title.trim() || !editForm.content.trim()) return;
+        setEditing(true);
+        try {
+            await axios.put(`${API}/memory/${editForm.id}`, {
+                title: editForm.title,
+                content: editForm.content,
+                source_type: editForm.source_type,
+                project_id: editForm.project_id || null
+            }, { headers: authHeaders() });
+            setShowEdit(false);
+            fetchDocs();
+        } catch (e) {
+            console.error("update doc error:", e);
+        } finally {
+            setEditing(false);
+        }
+    };
+
     const closeAddModal = () => {
         setShowAdd(false);
-        setAddForm({ title: "", content: "", source_type: "text" });
+        setAddForm({ title: "", content: "", source_type: "text", project_id: "" });
+    };
+
+    const closeEditModal = () => {
+        setShowEdit(false);
+        setEditForm({ id: "", title: "", content: "", source_type: "text", project_id: "" });
     };
 
     const handleAIQuery = async () => {
         if (!aiQuery.trim() || isStreaming || docs.length === 0) return;
         setSubmittedDocs(contextDocs);
         clear();
-        await stream("/ai/query", { query: aiQuery });
+        await stream("/ai/query", { query: aiQuery, project_id: selectedProjectId || null });
     };
 
     const copyResponse = () => {
@@ -294,14 +478,27 @@ export default function RAGMemory() {
                             <Database className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                            <h1 className="font-outfit text-2xl font-medium text-white">RAG Memory</h1>
+                            <h1 className="font-outfit text-2xl font-medium text-white">Memory</h1>
                             <p className="font-manrope text-sm text-zinc-400">
                                 {stats.total} doc{stats.total !== 1 ? "s" : ""} · {stats.totalWords.toLocaleString()} words indexed
                             </p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
+                        <select
+                            value={selectedProjectId}
+                            onChange={(e) => setSelectedProjectId(e.target.value)}
+                            data-testid="memory-project-scope-select"
+                            className="input-glass text-xs py-2 w-44"
+                        >
+                            <option value="" className="bg-[#0A0A0C]">All Projects Scope</option>
+                            {projects.map((proj) => (
+                                <option key={proj.id} value={proj.id} className="bg-[#0A0A0C]">
+                                    {proj.title}
+                                </option>
+                            ))}
+                        </select>
                         {stats.total > 0 && (
                             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                                 {Object.entries(stats.byType)
@@ -325,6 +522,54 @@ export default function RAGMemory() {
                         </button>
                     </div>
                 </motion.div>
+
+                {/* Onboarding Guide Banner */}
+                <AnimatePresence>
+                    {showOnboarding && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, height: 0, y: -15 }}
+                            className="mb-6 p-5 rounded-2xl border border-violet-500/20 bg-gradient-to-r from-violet-950/20 via-fuchsia-950/10 to-transparent backdrop-blur-md relative overflow-hidden"
+                        >
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-violet-600/5 rounded-full blur-3xl pointer-events-none" />
+                            <button
+                                onClick={handleDismissOnboarding}
+                                className="absolute top-4 right-4 p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-all"
+                                title="Dismiss Guide"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                            <div className="flex items-start gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center flex-shrink-0 text-violet-400 mt-0.5">
+                                    <Brain className="w-5 h-5 animate-pulse" />
+                                </div>
+                                <div className="max-w-3xl">
+                                    <h3 className="font-outfit text-base font-semibold text-white mb-1">
+                                        Welcome to RAG Memory Grounding
+                                    </h3>
+                                    <p className="font-manrope text-sm text-zinc-400 leading-relaxed mb-3">
+                                        Ground your AI assistants in reality. Upload style guides, API specs, or codebase notes. When you query the Memory or build blueprints, the AI retrieves these documents to eliminate hallucinations and generate context-accurate code matching your actual architecture.
+                                    </p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs font-manrope">
+                                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                                            <p className="font-semibold text-violet-300 mb-0.5">📚 Grounded Context</p>
+                                            <p className="text-zinc-500">Retrieves document fragments matching your queries for accuracy.</p>
+                                        </div>
+                                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                                            <p className="font-semibold text-cyan-300 mb-0.5">✂️ Keep It Focused</p>
+                                            <p className="text-zinc-500">Upload code blocks or docs in small, modular chunks under 2,000 words.</p>
+                                        </div>
+                                        <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                                            <p className="font-semibold text-amber-300 mb-0.5">🎯 Scoped Context</p>
+                                            <p className="text-zinc-500">Link docs to specific projects or scope them globally for general use.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* ─── Main Grid ─── */}
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
@@ -437,6 +682,7 @@ export default function RAGMemory() {
                                             onToggle={() => setExpandedId(expandedId === doc.id ? null : doc.id)}
                                             onDelete={handleDelete}
                                             deletingId={deletingId}
+                                            onEdit={handleEditClick}
                                         />
                                     ))}
                                 </AnimatePresence>
@@ -603,7 +849,10 @@ export default function RAGMemory() {
                                                                 className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-manrope border ${cfg.badge}`}
                                                             >
                                                                 <cfg.Icon className="w-2.5 h-2.5" />
-                                                                {d.title.length > 32 ? d.title.slice(0, 32) + "…" : d.title}
+                                                                {d.title.length > 22 ? d.title.slice(0, 22) + "…" : d.title}
+                                                                <span className="opacity-60 text-[9px] font-semibold tracking-wider ml-1.5 px-1 py-0.5 rounded bg-white/5 border border-white/5 uppercase">
+                                                                    Score: {d.score || 1}
+                                                                </span>
                                                             </span>
                                                         );
                                                     })}
@@ -646,6 +895,23 @@ export default function RAGMemory() {
                             </div>
 
                             <form onSubmit={handleAdd} className="space-y-4">
+                                {/* Guided Templates */}
+                                <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                                    <p className="text-[10px] tracking-wider text-zinc-500 font-manrope uppercase font-semibold mb-2">Or Start with a Guided Template:</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {Object.entries(TEMPLATES).map(([key, t]) => (
+                                            <button
+                                                key={key}
+                                                type="button"
+                                                onClick={() => handleApplyTemplate(t)}
+                                                className="px-2.5 py-1 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/15 hover:border-violet-500/35 text-violet-300 text-xs font-manrope transition-all"
+                                            >
+                                                {t.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 <div>
                                     <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-2">Title</label>
                                     <input
@@ -679,6 +945,23 @@ export default function RAGMemory() {
                                 </div>
 
                                 <div>
+                                    <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-2">Project Scope</label>
+                                    <select
+                                        value={addForm.project_id}
+                                        onChange={(e) => setAddForm((p) => ({ ...p, project_id: e.target.value }))}
+                                        data-testid="doc-project-select"
+                                        className="input-glass text-xs py-2 w-full"
+                                    >
+                                        <option value="" className="bg-[#0A0A0C]">Global (No Project Scope)</option>
+                                        {projects.map((proj) => (
+                                            <option key={proj.id} value={proj.id} className="bg-[#0A0A0C]">
+                                                {proj.title}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
                                     <div className="flex items-center justify-between mb-2">
                                         <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500">Content</label>
                                         <span className="text-[10px] font-manrope text-zinc-600">
@@ -709,6 +992,122 @@ export default function RAGMemory() {
                                         {adding
                                             ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</>
                                             : <><Upload className="w-4 h-4" />Add to Memory</>}
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ─── Edit Document Modal ─── */}
+            <AnimatePresence>
+                {showEdit && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm"
+                        onClick={(e) => e.target === e.currentTarget && closeEditModal()}
+                        data-testid="edit-doc-modal"
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                            className="w-full max-w-lg p-6 rounded-2xl bg-[#0F0F12] border border-white/[0.1] shadow-2xl"
+                        >
+                            <div className="flex items-center justify-between mb-5">
+                                <h3 className="font-outfit text-lg font-medium text-white">Edit Document</h3>
+                                <button
+                                    onClick={closeEditModal}
+                                    data-testid="close-edit-modal"
+                                    className="p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-all"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleUpdate} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-2">Title</label>
+                                    <input
+                                        value={editForm.title}
+                                        onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))}
+                                        placeholder="e.g. Auth Architecture, API Spec, Tech Notes..."
+                                        required data-testid="edit-doc-title-input"
+                                        className="input-glass"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-2">Type</label>
+                                    <div className="flex gap-2">
+                                        {Object.entries(SOURCE_CONFIG).map(([id, cfg]) => (
+                                            <button
+                                                key={id} type="button"
+                                                onClick={() => setEditForm((p) => ({ ...p, source_type: id }))}
+                                                data-testid={`edit-type-${id}`}
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-manrope transition-all border ${
+                                                    editForm.source_type === id
+                                                        ? cfg.badge
+                                                        : "bg-white/[0.04] border-white/[0.07] text-zinc-400 hover:text-white"
+                                                }`}
+                                            >
+                                                <cfg.Icon className="w-3.5 h-3.5" />
+                                                {cfg.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-2">Project Scope</label>
+                                    <select
+                                        value={editForm.project_id}
+                                        onChange={(e) => setEditForm((p) => ({ ...p, project_id: e.target.value }))}
+                                        data-testid="edit-doc-project-select"
+                                        className="input-glass text-xs py-2 w-full"
+                                    >
+                                        <option value="" className="bg-[#0A0A0C]">Global (No Project Scope)</option>
+                                        {projects.map((proj) => (
+                                            <option key={proj.id} value={proj.id} className="bg-[#0A0A0C]">
+                                                {proj.title}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500">Content</label>
+                                        <span className="text-[10px] font-manrope text-zinc-600">
+                                            {editForm.content.length.toLocaleString()} chars
+                                        </span>
+                                    </div>
+                                    <textarea
+                                        value={editForm.content}
+                                        onChange={(e) => setEditForm((p) => ({ ...p, content: e.target.value }))}
+                                        placeholder="Paste document content, code snippets, notes, or any text you want the AI to remember..."
+                                        rows={7} required
+                                        data-testid="edit-doc-content-input"
+                                        className={`input-glass resize-none text-sm scrollbar-ghost ${
+                                            editForm.source_type === "code" ? "font-jetbrains" : ""
+                                        }`}
+                                    />
+                                </div>
+
+                                <div className="flex gap-3 pt-1">
+                                    <button type="button" onClick={closeEditModal} className="flex-1 py-2.5 rounded-xl btn-secondary text-sm">
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit" disabled={editing}
+                                        data-testid="update-doc-btn"
+                                        className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-medium font-manrope text-sm hover:brightness-110 transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                                    >
+                                        {editing
+                                            ? <><Loader2 className="w-4 h-4 animate-spin" />Saving...</>
+                                            : <><Upload className="w-4 h-4" />Save Changes</>}
                                     </button>
                                 </div>
                             </form>

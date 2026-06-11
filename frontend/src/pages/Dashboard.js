@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Brain, Code2, Database, Plus, ArrowRight, FolderOpen, Zap, TrendingUp, Activity, Layers } from "lucide-react";
+import { Brain, Code2, Database, Plus, ArrowRight, FolderOpen, Zap, TrendingUp, Activity, Layers, Trash2, Loader2 } from "lucide-react";
 import axios from "axios";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/context/AuthContext";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL || ""}/api`;
 
 const quickActions = [
     { label: "AI Project Architect", desc: "Generate a project blueprint from your idea", href: "/architect", icon: Brain, gradient: "from-purple-500 to-violet-600" },
     { label: "AI Sprint Planner", desc: "AI Kanban board with drag-and-drop tasks", href: "/sprint", icon: Layers, gradient: "from-cyan-400 to-purple-500" },
     { label: "CTO Console", desc: "Get expert technical guidance and advice", href: "/cto", icon: Code2, gradient: "from-cyan-400 to-blue-500" },
-    { label: "RAG Memory", desc: "Manage your AI knowledge base", href: "/memory", icon: Database, gradient: "from-violet-500 to-fuchsia-600" },
+    { label: "Memory", desc: "Manage your AI knowledge base", href: "/memory", icon: Database, gradient: "from-violet-500 to-fuchsia-600" },
 ];
 
 const statusColors = {
@@ -26,6 +26,30 @@ export default function Dashboard() {
     const { user, getToken } = useAuth();
     const [stats, setStats] = useState({ projects_count: 0, memory_count: 0, ai_queries_count: 0, recent_projects: [] });
     const [loading, setLoading] = useState(true);
+    const [deletingId, setDeletingId] = useState(null);
+
+    const handleDeleteProject = async (projectId) => {
+        if (window.confirm("Are you sure you want to delete this project? This will permanently remove all associated architectural blueprints, sprint tasks, and context files.")) {
+            setDeletingId(projectId);
+            try {
+                const token = getToken();
+                await axios.delete(`${API}/projects/${projectId}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                // Fetch stats again to update counts and list dynamically
+                const { data } = await axios.get(`${API}/stats`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setStats(data);
+            } catch (err) {
+                console.error("Failed to delete project:", err);
+                alert("Failed to delete project. Please try again.");
+            } finally {
+                setDeletingId(null);
+            }
+        }
+    };
 
     useEffect(() => {
         const fetch = async () => {
@@ -135,15 +159,32 @@ export default function Dashboard() {
                                     <motion.div key={project.id} data-testid={`project-item-${i}`}
                                         initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: 0.3 + i * 0.05 }}
-                                        className="p-4 rounded-xl glass-card-hover">
-                                        <div className="flex items-start justify-between gap-2">
-                                            <div className="min-w-0">
+                                        className="p-4 rounded-xl glass-card-hover group relative">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="min-w-0 flex-1">
                                                 <p className="font-outfit font-medium text-white text-sm truncate">{project.title}</p>
                                                 <p className="font-manrope text-xs text-zinc-500 mt-0.5 truncate">{project.description || "No description"}</p>
                                             </div>
-                                            <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full border font-manrope ${statusColors[project.status] || statusColors.ideation}`}>
-                                                {project.status}
-                                            </span>
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                                <span className={`text-xs px-2 py-0.5 rounded-full border font-manrope ${statusColors[project.status] || statusColors.ideation}`}>
+                                                    {project.status}
+                                                </span>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        handleDeleteProject(project.id);
+                                                    }}
+                                                    disabled={deletingId === project.id}
+                                                    className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
+                                                    title="Delete Project"
+                                                >
+                                                    {deletingId === project.id ? (
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    ) : (
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    )}
+                                                </button>
+                                            </div>
                                         </div>
                                     </motion.div>
                                 ))}

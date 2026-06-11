@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Sparkles, LayoutDashboard, Brain, Code2, Database, LogOut, Menu, X, Layers } from "lucide-react";
+import { Sparkles, LayoutDashboard, Brain, Code2, Database, LogOut, Menu, X, Layers, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "next-themes";
 
 const navLinks = [
     { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -17,6 +18,7 @@ export default function Navbar() {
     const location = useLocation();
     const navigate = useNavigate();
     const [mobileOpen, setMobileOpen] = useState(false);
+    const { theme, setTheme } = useTheme();
 
     const handleLogout = () => {
         logout();
@@ -27,7 +29,7 @@ export default function Navbar() {
         <nav className="nav-glass" data-testid="app-navbar">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                 {/* Logo */}
-                <Link to="/dashboard" className="flex items-center gap-2.5 flex-shrink-0" data-testid="nav-logo">
+                <Link to="/" className="flex items-center gap-2.5 flex-shrink-0" data-testid="nav-logo">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-cyan-400 flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.4)]">
                         <Sparkles className="w-4 h-4 text-white" />
                     </div>
@@ -62,6 +64,12 @@ export default function Navbar() {
                             {user?.name}
                         </span>
                     </div>
+                    {/* Theme Toggle */}
+                    <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                        className="p-2 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-all duration-200"
+                        title="Toggle Theme">
+                        {theme === "dark" ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-purple-600" />}
+                    </button>
                     <button onClick={handleLogout} data-testid="nav-logout-btn"
                         className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-all duration-200"
                         title="Logout">

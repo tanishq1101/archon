@@ -6,6 +6,33 @@
 
 @layer base {
     :root {
+        --background: 240 10% 98%;
+        --foreground: 240 10% 3.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 240 10% 3.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 240 10% 3.9%;
+        --primary: 263 70% 50%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 240 4.8% 95.9%;
+        --secondary-foreground: 240 5.9% 10%;
+        --muted: 240 4.8% 95.9%;
+        --muted-foreground: 240 3.8% 46.1%;
+        --accent: 240 4.8% 95.9%;
+        --accent-foreground: 240 5.9% 10%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 240 5.9% 90%;
+        --input: 240 5.9% 90%;
+        --ring: 263 70% 50%;
+        --chart-1: 263 70% 50%;
+        --chart-2: 190 80% 43%;
+        --chart-3: 217 80% 55%;
+        --chart-4: 43 74% 66%;
+        --chart-5: 340 75% 55%;
+        --radius: 0.75rem;
+    }
+    .dark {
         --background: 240 6% 5%;
         --foreground: 0 0% 100%;
         --card: 240 6% 7%;
@@ -30,7 +57,6 @@
         --chart-3: 217 80% 55%;
         --chart-4: 43 74% 66%;
         --chart-5: 340 75% 55%;
-        --radius: 0.75rem;
     }
 }
 
@@ -40,7 +66,7 @@
         box-sizing: border-box;
     }
     body {
-        @apply bg-[#0A0A0C] text-white;
+        @apply bg-background text-foreground transition-colors duration-300;
         font-family: 'Manrope', sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
@@ -56,28 +82,28 @@
 
 @layer components {
     .glass-card {
-        @apply bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl;
+        @apply bg-white/70 dark:bg-white/[0.03] backdrop-blur-xl border border-zinc-200/50 dark:border-white/[0.08] rounded-2xl shadow-sm dark:shadow-none transition-all duration-300;
     }
     .glass-card-hover {
-        @apply glass-card transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)];
+        @apply glass-card transition-all duration-300 hover:-translate-y-1 hover:border-zinc-300 dark:hover:border-white/20 hover:shadow-[0_20px_40px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)];
     }
     .gradient-text {
-        @apply bg-gradient-to-r from-purple-400 via-violet-400 to-cyan-400 bg-clip-text text-transparent;
+        @apply bg-gradient-to-r from-purple-600 via-violet-500 to-cyan-500 dark:from-purple-400 dark:via-violet-400 dark:to-cyan-400 bg-clip-text text-transparent;
     }
     .gradient-text-alt {
-        @apply bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent;
+        @apply bg-gradient-to-r from-cyan-500 to-purple-600 dark:from-cyan-400 dark:to-purple-400 bg-clip-text text-transparent;
     }
     .btn-primary {
-        @apply px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-medium hover:brightness-110 hover:shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all duration-300;
+        @apply px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-500 text-white font-medium hover:brightness-110 hover:shadow-[0_0_20px_rgba(139,92,246,0.3)] dark:hover:shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all duration-300;
     }
     .btn-secondary {
-        @apply px-6 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all duration-300 backdrop-blur-md;
+        @apply px-6 py-2.5 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-white hover:bg-zinc-200 dark:hover:bg-white/10 transition-all duration-300 backdrop-blur-md;
     }
     .input-glass {
-        @apply bg-white/[0.04] border border-white/[0.08] text-white placeholder-zinc-500 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500/50 transition-all duration-200 w-full font-manrope;
+        @apply bg-zinc-50 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/[0.08] text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 rounded-xl px-4 py-3 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500/50 transition-all duration-200 w-full font-manrope;
     }
     .nav-glass {
-        @apply fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#0A0A0C]/80 border-b border-white/[0.06];
+        @apply fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-white/70 dark:bg-[#0A0A0C]/80 border-b border-zinc-200/50 dark:border-white/[0.06];
     }
     .scrollbar-ghost {
         scrollbar-width: thin;
@@ -97,9 +123,13 @@
 
 /* Animated grid background */
 .bg-grid {
+    background-image: linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+    background-size: 64px 64px;
+}
+.dark .bg-grid {
     background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
                       linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-    background-size: 64px 64px;
 }
 
 /* Glow effects */

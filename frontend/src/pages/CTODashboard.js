@@ -1,8 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Code2, Sparkles, RefreshCw, ChevronRight, Loader2, Copy, Check } from "lucide-react";
+import axios from "axios";
 import Navbar from "@/components/Navbar";
 import { useAIStream } from "@/hooks/useAIStream";
+import { useAuth } from "@/context/AuthContext";
+
+const API = `${process.env.REACT_APP_BACKEND_URL || ""}/api`;
 
 const categories = [
     { id: "architecture", label: "Architecture", color: "from-purple-500 to-violet-600" },
@@ -41,7 +45,10 @@ function MarkdownContent({ text }) {
 }
 
 export default function CTODashboard() {
+    const { getToken } = useAuth();
     const { output, isStreaming, error, stream, clear } = useAIStream();
+    const [projects, setProjects] = useState([]);
+    const [selectedProjectId, setSelectedProjectId] = useState("");
     const [question, setQuestion] = useState("");
     const [context, setContext] = useState("");
     const [category, setCategory] = useState("architecture");
@@ -50,6 +57,37 @@ export default function CTODashboard() {
     const [history, setHistory] = useState([]);
     const outputRef = useRef(null);
     const textareaRef = useRef(null);
+
+    useEffect(() => {
+        const fetchProjects = async () => {
+            try {
+                const token = getToken();
+                const { data } = await axios.get(`${API}/projects`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setProjects(data);
+            } catch (err) {
+                console.error("Failed to fetch projects:", err);
+            }
+        };
+        fetchProjects();
+    }, [getToken]);
+
+    const handleProjectChange = (projectId) => {
+        setSelectedProjectId(projectId);
+        if (!projectId) {
+            setTechStack("");
+            setContext("");
+            return;
+        }
+        const proj = projects.find((p) => p.id === projectId);
+        if (proj) {
+            setTechStack(proj.tech_stack ? proj.tech_stack.join(", ") : "");
+            setContext(
+                `Project Idea: ${proj.idea || ""}\n\nDescription: ${proj.description || ""}`
+            );
+        }
+    };
 
     useEffect(() => {
         if (outputRef.current && isStreaming) {
@@ -101,6 +139,24 @@ export default function CTODashboard() {
                     {/* Input Panel */}
                     <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.1 }} className="lg:col-span-1 space-y-4">
+                        {/* Context Project */}
+                        <div className="p-4 rounded-2xl glass-card">
+                            <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-2">Context Project</label>
+                            <select
+                                value={selectedProjectId}
+                                onChange={(e) => handleProjectChange(e.target.value)}
+                                data-testid="cto-project-select"
+                                className="input-glass text-xs py-2 w-full"
+                            >
+                                <option value="" className="bg-[#0A0A0C]">None (General Advice)</option>
+                                {projects.map((proj) => (
+                                    <option key={proj.id} value={proj.id} className="bg-[#0A0A0C]">
+                                        {proj.title}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
                         {/* Category */}
                         <div className="p-4 rounded-2xl glass-card">
                             <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-3">Category</label>
