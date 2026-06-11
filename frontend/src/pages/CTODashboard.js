@@ -46,17 +46,46 @@ function MarkdownContent({ text }) {
 
 export default function CTODashboard() {
     const { getToken } = useAuth();
-    const { output, isStreaming, error, stream, clear } = useAIStream();
+    const { output, isStreaming, error, stream, clear } = useAIStream("ghostboard_cto_response");
     const [projects, setProjects] = useState([]);
-    const [selectedProjectId, setSelectedProjectId] = useState("");
-    const [question, setQuestion] = useState("");
-    const [context, setContext] = useState("");
-    const [category, setCategory] = useState("architecture");
-    const [techStack, setTechStack] = useState("");
+    const [selectedProjectId, setSelectedProjectId] = useState(() => localStorage.getItem("ghostboard_cto_selectedProjectId") || "");
+    const [question, setQuestion] = useState(() => localStorage.getItem("ghostboard_cto_question") || "");
+    const [context, setContext] = useState(() => localStorage.getItem("ghostboard_cto_context") || "");
+    const [category, setCategory] = useState(() => localStorage.getItem("ghostboard_cto_category") || "architecture");
+    const [techStack, setTechStack] = useState(() => localStorage.getItem("ghostboard_cto_techStack") || "");
     const [copied, setCopied] = useState(false);
     const [history, setHistory] = useState([]);
     const outputRef = useRef(null);
     const textareaRef = useRef(null);
+
+    // Persist values to localStorage
+    useEffect(() => {
+        localStorage.setItem("ghostboard_cto_selectedProjectId", selectedProjectId);
+    }, [selectedProjectId]);
+
+    useEffect(() => {
+        localStorage.setItem("ghostboard_cto_question", question);
+    }, [question]);
+
+    useEffect(() => {
+        localStorage.setItem("ghostboard_cto_context", context);
+    }, [context]);
+
+    useEffect(() => {
+        localStorage.setItem("ghostboard_cto_category", category);
+    }, [category]);
+
+    useEffect(() => {
+        localStorage.setItem("ghostboard_cto_techStack", techStack);
+    }, [techStack]);
+
+    const handleClear = () => {
+        clear();
+        setQuestion("");
+        setContext("");
+        localStorage.removeItem("ghostboard_cto_question");
+        localStorage.removeItem("ghostboard_cto_context");
+    };
 
     useEffect(() => {
         const fetchProjects = async () => {
@@ -255,7 +284,7 @@ export default function CTODashboard() {
                                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08] text-zinc-400 hover:text-white text-xs font-manrope transition-all">
                                             {copied ? <><Check className="w-3 h-3 text-green-400" /> Copied</> : <><Copy className="w-3 h-3" /> Copy</>}
                                         </button>
-                                        <button onClick={clear} className="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-400 transition-colors">
+                                        <button onClick={handleClear} className="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-400 transition-colors">
                                             <RefreshCw className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
