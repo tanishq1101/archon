@@ -198,6 +198,23 @@ export default function LandingPage() {
     const [autoplay, setAutoplay] = useState(true);
     const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
 
+    const [showSplash, setShowSplash] = useState(() => {
+        if (typeof window !== "undefined") {
+            return !sessionStorage.getItem("spectreflow_splash_shown");
+        }
+        return true;
+    });
+
+    useEffect(() => {
+        if (showSplash) {
+            const timer = setTimeout(() => {
+                setShowSplash(false);
+                sessionStorage.setItem("spectreflow_splash_shown", "true");
+            }, 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [showSplash]);
+
     // Track window width for responsive card rendering in carousel
     useEffect(() => {
         const handleResize = () => setWindowWidth(window.innerWidth);
@@ -251,6 +268,128 @@ export default function LandingPage() {
 
     return (
         <div className="min-h-screen bg-background text-foreground overflow-x-hidden relative transition-colors duration-300" data-testid="landing-page">
+            <AnimatePresence>
+                {showSplash && (
+                    <motion.div
+                        key="splash"
+                        initial={{ opacity: 1 }}
+                        exit={{ 
+                            opacity: 0, 
+                            scale: 1.1,
+                            filter: "blur(10px)",
+                            transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } 
+                        }}
+                        className="fixed inset-0 z-[9999] bg-[#070709] flex flex-col items-center justify-center overflow-hidden"
+                    >
+                        {/* Glow effect behind */}
+                        <div className="absolute w-[500px] h-[500px] rounded-full bg-gradient-to-br from-purple-500/10 to-cyan-500/10 blur-[100px] pointer-events-none" />
+
+                        {/* Particle layout / Grid */}
+                        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:4rem_4rem] pointer-events-none" />
+
+                        <div className="relative flex flex-col items-center">
+                            {/* Logo Wrapper */}
+                            <motion.div
+                                initial={{ scale: 0.6, opacity: 0 }}
+                                animate={{ 
+                                    scale: 1, 
+                                    opacity: 1,
+                                    transition: { duration: 1.2, ease: [0.16, 1, 0.3, 1] }
+                                }}
+                                className="relative w-28 h-28 mb-8"
+                            >
+                                {/* Glowing outer ring */}
+                                <motion.div 
+                                    className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-purple-500/20 to-cyan-500/20 blur-md border border-white/10"
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                                />
+                                
+                                {/* Inner Logo SVG */}
+                                <div className="absolute inset-2 bg-[#0E0E12]/80 border border-white/[0.08] rounded-2xl flex items-center justify-center backdrop-blur-xl">
+                                    <svg className="w-16 h-16" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <defs>
+                                            <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                <stop offset="0%" stopColor="#A855F7" />
+                                                <stop offset="100%" stopColor="#06B6D4" />
+                                            </linearGradient>
+                                            <filter id="logo-glow" x="-20%" y="-20%" width="140%" height="140%">
+                                                <feGaussianBlur stdDeviation="3" result="blur" />
+                                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                            </filter>
+                                        </defs>
+                                        {/* Wave Path */}
+                                        <motion.path
+                                            d="M15,50 C25,25 35,75 45,50 C55,25 65,75 75,50 C85,25 90,50 90,50"
+                                            stroke="url(#logo-grad)"
+                                            strokeWidth="6"
+                                            strokeLinecap="round"
+                                            filter="url(#logo-glow)"
+                                            initial={{ pathLength: 0 }}
+                                            animate={{ pathLength: 1 }}
+                                            transition={{ duration: 1.8, delay: 0.4, ease: "easeInOut" }}
+                                        />
+                                        {/* Ghost Hood Path */}
+                                        <motion.path
+                                            d="M35,65 C35,45 42,30 50,30 C58,30 65,45 65,65"
+                                            stroke="url(#logo-grad)"
+                                            strokeWidth="5"
+                                            strokeLinecap="round"
+                                            filter="url(#logo-glow)"
+                                            initial={{ pathLength: 0, opacity: 0 }}
+                                            animate={{ pathLength: 1, opacity: 1 }}
+                                            transition={{ duration: 1.5, delay: 0.8, ease: "easeInOut" }}
+                                        />
+                                        {/* Glowing Eyes */}
+                                        <motion.circle cx="45" cy="48" r="3" fill="#06B6D4" initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0, 1] }} transition={{ delay: 1.5, duration: 0.8 }} />
+                                        <motion.circle cx="55" cy="48" r="3" fill="#06B6D4" initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0, 1] }} transition={{ delay: 1.5, duration: 0.8 }} />
+                                    </svg>
+                                </div>
+                            </motion.div>
+
+                            {/* App Name */}
+                            <div className="flex overflow-hidden">
+                                {"SpectreFlow".split("").map((letter, i) => (
+                                    <motion.span
+                                        key={i}
+                                        initial={{ y: 50, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        transition={{ 
+                                            duration: 0.6, 
+                                            delay: 0.8 + (i * 0.05),
+                                            ease: [0.16, 1, 0.3, 1] 
+                                        }}
+                                        className="font-outfit text-3xl font-semibold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-white via-white to-white/60 select-none"
+                                    >
+                                        {letter}
+                                    </motion.span>
+                                ))}
+                            </div>
+
+                            {/* Subtitle */}
+                            <motion.p
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.8, delay: 1.6 }}
+                                className="font-manrope text-xs tracking-[0.25em] text-zinc-500 uppercase mt-3"
+                            >
+                                AI Project Operating System
+                            </motion.p>
+                        </div>
+
+                        {/* Loader bar */}
+                        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 w-48 h-[1px] bg-white/[0.05] rounded-full overflow-hidden">
+                            <motion.div 
+                                className="h-full bg-gradient-to-r from-purple-500 to-cyan-400"
+                                initial={{ width: "0%" }}
+                                animate={{ width: "100%" }}
+                                transition={{ duration: 2.5, ease: "easeInOut" }}
+                            />
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Header Navigation */}
             <nav className="nav-glass" data-testid="landing-nav">
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -259,7 +398,7 @@ export default function LandingPage() {
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-cyan-400 flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.4)]">
                             <Sparkles className="w-4 h-4 text-white" />
                         </div>
-                        <span className="font-outfit font-semibold text-zinc-900 dark:text-white text-lg">GhostBoard AI</span>
+                        <span className="font-outfit font-semibold text-zinc-900 dark:text-white text-lg">SpectreFlow AI</span>
                     </Link>
 
                     {/* Navigation Links */}
