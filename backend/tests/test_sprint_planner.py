@@ -4,17 +4,12 @@ import requests
 import os
 import time
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
+BASE_URL = (os.environ.get('REACT_APP_BACKEND_URL') or 'http://localhost:8000').rstrip('/')
 
 @pytest.fixture(scope="module")
-def auth_token():
-    resp = requests.post(f"{BASE_URL}/api/auth/login", json={"email": "admin@ghostboard.ai", "password": "GhostBoard123!"})
-    assert resp.status_code == 200, f"Login failed: {resp.text}"
-    return resp.json()["token"]
-
-@pytest.fixture(scope="module")
-def auth_headers(auth_token):
-    return {"Authorization": f"Bearer {auth_token}"}
+def auth_headers():
+    # Auth is via Clerk; tests use the non-production mock_test_token shortcut.
+    return {"Authorization": "Bearer mock_test_token"}
 
 # --- GET /api/tasks ---
 def test_get_tasks_empty_or_list(auth_headers):

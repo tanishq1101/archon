@@ -33,5 +33,3 @@ if not OPENROUTER_API_KEY:
     logger.warning("OPENROUTER_API_KEY is not set. AI functionalities will fail.")
 
 DEFAULT_MODEL = os.environ.get("AI_MODEL", "google/gemini-2.5-flash:free")
-JWT_SECRET = os.environ.get("JWT_SECRET", "fallback-secret-key")
-JWT_ALGORITHM = "HS256"

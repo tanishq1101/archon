@@ -60,8 +60,10 @@ async def update_project(project_id: str, data: ProjectUpdate, current_user=Depe
         raise HTTPException(status_code=404, detail="Project not found")
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     if update_data:
-        await db.projects.update_one({"id": project_id}, {"$set": update_data})
-    p = await db.projects.find_one({"id": project_id})
+        # Re-scope the write by user_id so ownership is enforced in the same
+        # query, not just the prior read.
+        await db.projects.update_one({"id": project_id, "user_id": current_user["id"]}, {"$set": update_data})
+    p = await db.projects.find_one({"id": project_id, "user_id": current_user["id"]})
     p["_id"] = str(p["_id"])
     return p
 

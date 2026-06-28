@@ -8,6 +8,16 @@ import {
 import axios from "axios";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/context/AuthContext";
+import {
+    AlertDialog,
+    AlertDialogContent,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogCancel,
+    AlertDialogAction
+} from "@/components/ui/alert-dialog";
 
 const API = `${process.env.REACT_APP_BACKEND_URL || ""}/api`;
 
@@ -243,6 +253,7 @@ export default function SprintPlanner() {
 
     // Story Point Guide modal state
     const [showSPGuide, setShowSPGuide] = useState(false);
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
 
     // Sprint Goal state
     const [sprintGoal, setSprintGoal] = useState("");
@@ -434,12 +445,12 @@ export default function SprintPlanner() {
     };
 
     const handleClearAll = async () => {
-        if (!window.confirm("Clear all tasks? This cannot be undone.")) return;
         const ids = [...tasks.map((t) => t.id)];
         setTasks([]);
         for (const id of ids) {
             try { await axios.delete(`${API}/tasks/${id}`, { headers: authHeaders() }); } catch {}
         }
+        setShowClearConfirm(false);
     };
 
     return (
@@ -462,7 +473,7 @@ export default function SprintPlanner() {
 
                     <div className="flex items-center gap-2 flex-wrap">
                         {tasks.length > 0 && (
-                            <button onClick={handleClearAll} data-testid="clear-all-btn"
+                            <button onClick={() => setShowClearConfirm(true)} data-testid="clear-all-btn"
                                 className="px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.07] text-zinc-400 hover:text-red-400 text-sm font-manrope transition-all flex items-center gap-1.5">
                                 <Trash2 className="w-3.5 h-3.5" /> Clear
                             </button>
@@ -1091,6 +1102,26 @@ export default function SprintPlanner() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* AlertDialog for Task Clearing Confirmation */}
+            <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+                <AlertDialogContent className="bg-[#0F0F13] border border-white/[0.1] text-white">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="font-outfit text-white text-lg font-medium">Clear All Tasks</AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-400 font-manrope text-sm leading-relaxed">
+                            Are you sure you want to clear all tasks? This action cannot be undone and will permanently delete all tickets from the board.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-4">
+                        <AlertDialogCancel className="bg-white/[0.05] border border-white/[0.08] hover:bg-white/10 text-zinc-300 px-4 py-2 rounded-lg font-manrope text-xs">
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={handleClearAll} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-manrope text-xs border-0">
+                            Clear All
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

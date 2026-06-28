@@ -5,6 +5,7 @@ import {
     Upload, Sparkles, X, ChevronDown, ChevronUp, Copy, Check, Brain, Edit
 } from "lucide-react";
 import axios from "axios";
+import ReactMarkdown from "react-markdown";
 import Navbar from "@/components/Navbar";
 import { useAIStream } from "@/hooks/useAIStream";
 import { useAuth } from "@/context/AuthContext";
@@ -35,22 +36,57 @@ const SOURCE_CONFIG = {
 // ─── Markdown renderer ───────────────────────────────────────────────────────
 
 function MarkdownContent({ text }) {
-    const html = useMemo(() => {
-        if (!text) return "";
-        return text
-            .replace(/^## (.+)$/gm, '<h2 class="font-outfit text-base font-semibold text-white mt-5 mb-2">$1</h2>')
-            .replace(/^### (.+)$/gm, '<h3 class="font-outfit text-sm font-medium text-violet-300 mt-3 mb-1">$1</h3>')
-            .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
-            .replace(/`([^`\n]+)`/g, '<code class="font-jetbrains text-xs bg-white/10 text-cyan-300 px-1.5 py-0.5 rounded">$1</code>')
-            .replace(/^- (.+)$/gm, '<li class="text-zinc-300 ml-4 mb-0.5 list-disc text-sm">$1</li>')
-            .replace(/^---$/gm, '<hr class="border-white/10 my-4"/>')
-            .replace(/\n\n/g, '</p><p class="mb-2">');
-    }, [text]);
     return (
-        <div
+        <ReactMarkdown
             className="font-manrope text-sm text-zinc-300 leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: `<p class="mb-2">${html}</p>` }}
-        />
+            components={{
+                h2: ({ children }) => (
+                    <h2 className="font-outfit text-base font-semibold text-white mt-5 mb-2">
+                        {children}
+                    </h2>
+                ),
+                h3: ({ children }) => (
+                    <h3 className="font-outfit text-sm font-medium text-violet-300 mt-3 mb-1">
+                        {children}
+                    </h3>
+                ),
+                strong: ({ children }) => (
+                    <strong className="text-white font-semibold">
+                        {children}
+                    </strong>
+                ),
+                code: ({ children }) => (
+                    <code className="font-jetbrains text-xs bg-white/10 text-cyan-300 px-1.5 py-0.5 rounded">
+                        {children}
+                    </code>
+                ),
+                ul: ({ children }) => (
+                    <ul className="list-disc pl-4 space-y-1">
+                        {children}
+                    </ul>
+                ),
+                ol: ({ children }) => (
+                    <ol className="list-decimal pl-4 space-y-1">
+                        {children}
+                    </ol>
+                ),
+                li: ({ children }) => (
+                    <li className="text-zinc-300 mb-0.5 text-sm">
+                        {children}
+                    </li>
+                ),
+                hr: () => (
+                    <hr className="border-white/10 my-4" />
+                ),
+                p: ({ children }) => (
+                    <p className="mb-2">
+                        {children}
+                    </p>
+                )
+            }}
+        >
+            {text}
+        </ReactMarkdown>
     );
 }
 

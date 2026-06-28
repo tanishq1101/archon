@@ -63,33 +63,28 @@ async def create_task(data: TaskCreate, current_user=Depends(get_current_user)):
 
 @router.put("/{task_id}")
 async def update_task(task_id: str, data: TaskUpdate, current_user=Depends(get_current_user)):
-    # 1. Fetch task without user scoping to check ownership specifically
     t = await db.sprint_tasks.find_one({"id": task_id})
     if not t:
         raise HTTPException(status_code=404, detail="Task not found")
+    if t["user_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="You do not own this task")
         
-    # 2. Check ownership
-    if t.get("user_id") != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Forbidden: You do not own this task")
-        
-    # 3. Update
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     if update_data:
-        await db.sprint_tasks.update_one({"id": task_id}, {"$set": update_data})
+        await db.sprint_tasks.update_one({"id": task_id, "user_id": current_user["id"]}, {"$set": update_data})
         
-    updated = await db.sprint_tasks.find_one({"id": task_id})
+    updated = await db.sprint_tasks.find_one({"id": task_id, "user_id": current_user["id"]})
     updated["_id"] = str(updated["_id"])
     return updated
 
+
 @router.delete("/{task_id}")
 async def delete_task(task_id: str, current_user=Depends(get_current_user)):
-    # 1. Fetch task to check ownership
     t = await db.sprint_tasks.find_one({"id": task_id})
     if not t:
         raise HTTPException(status_code=404, detail="Task not found")
+    if t["user_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="You do not own this task")
         
-    if t.get("user_id") != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Forbidden: You do not own this task")
-        
-    await db.sprint_tasks.delete_one({"id": task_id})
+    await db.sprint_tasks.delete_one({"id": task_id, "user_id": current_user["id"]})
     return {"message": "Deleted"}

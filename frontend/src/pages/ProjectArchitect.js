@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Brain, Sparkles, Save, RefreshCw, Copy, Check, Plus, X, Loader2, Download } from "lucide-react";
 import axios from "axios";
+import ReactMarkdown from "react-markdown";
 import Navbar from "@/components/Navbar";
 import { useAIStream } from "@/hooks/useAIStream";
 import { useAuth } from "@/context/AuthContext";
@@ -66,27 +67,60 @@ const parsePrompts = (rawText) => {
 };
 
 function MarkdownContent({ text }) {
-    const formatText = (raw) => {
-        if (!raw) return "";
-        return raw
-            .replace(/^## (.+)$/gm, '<h2 class="font-outfit text-lg font-medium text-white mt-6 mb-2 border-b border-white/10 pb-2">$1</h2>')
-            .replace(/^### (.+)$/gm, '<h3 class="font-outfit text-base font-medium text-purple-300 mt-4 mb-1.5">$1</h3>')
-            .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white font-medium">$1</strong>')
-            .replace(/`(.+?)`/g, '<code class="font-jetbrains text-xs bg-white/10 text-cyan-300 px-1.5 py-0.5 rounded">$1</code>')
-            .replace(/^- (.+)$/gm, '<li class="text-zinc-300 ml-4 mb-1 list-disc">$1</li>')
-            .replace(/^\d+\. (.+)$/gm, '<li class="text-zinc-300 ml-4 mb-1 list-decimal">$1</li>')
-            .replace(/\n\n/g, '<br/><br/>');
-    };
-
     return (
-        <div className="font-manrope text-sm text-zinc-300 leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: formatText(text) }} />
+        <ReactMarkdown
+            className="font-manrope text-sm text-zinc-300 leading-relaxed"
+            components={{
+                h2: ({ children }) => (
+                    <h2 className="font-outfit text-lg font-medium text-white mt-6 mb-2 border-b border-white/10 pb-2">
+                        {children}
+                    </h2>
+                ),
+                h3: ({ children }) => (
+                    <h3 className="font-outfit text-base font-medium text-purple-300 mt-4 mb-1.5">
+                        {children}
+                    </h3>
+                ),
+                strong: ({ children }) => (
+                    <strong className="text-white font-medium">
+                        {children}
+                    </strong>
+                ),
+                code: ({ children }) => (
+                    <code className="font-jetbrains text-xs bg-white/10 text-cyan-300 px-1.5 py-0.5 rounded">
+                        {children}
+                    </code>
+                ),
+                ul: ({ children }) => (
+                    <ul className="list-disc pl-4 space-y-1">
+                        {children}
+                    </ul>
+                ),
+                ol: ({ children }) => (
+                    <ol className="list-decimal pl-4 space-y-1">
+                        {children}
+                    </ol>
+                ),
+                li: ({ children }) => (
+                    <li className="text-zinc-300 mb-1">
+                        {children}
+                    </li>
+                ),
+                p: ({ children }) => (
+                    <p className="mb-2">
+                        {children}
+                    </p>
+                )
+            }}
+        >
+            {text}
+        </ReactMarkdown>
     );
 }
 
 export default function ProjectArchitect() {
     const { getToken } = useAuth();
-    const { output, isStreaming, error, stream, clear } = useAIStream("ghostboard_architect_output");
+    const { output, isStreaming, error, stream, clear } = useAIStream();
     
     // Idea Enhancement Stream Hook
     const {

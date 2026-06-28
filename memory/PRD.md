@@ -16,13 +16,21 @@ Developers and teams waste time on project planning, architecture decisions, and
 
 ### Tech Stack
 - **Frontend**: React, Tailwind CSS, Framer Motion, Lucide React
-- **Backend**: FastAPI (Python), MongoDB (Motor async)
-- **AI**: OpenRouter API (deepseek/deepseek-chat by default)
-- **Auth**: JWT tokens (localStorage), bcrypt password hashing
+- **Backend**: FastAPI (Python), Supabase (Postgres) via the Supabase Python client
+- **AI**: OpenRouter API (configurable via `AI_MODEL`, defaults to a free Gemini model)
+- **Auth**: Clerk (frontend SDK + backend JWKS/RS256 verification). No passwords are
+  stored or verified server-side — registration/login happen client-side via Clerk.
+
+> Historical note: an earlier iteration used MongoDB + JWT/bcrypt. That stack has
+> been fully replaced by Supabase + Clerk; the backend no longer uses Mongo, Motor,
+> bcrypt, or server-issued JWTs.
 
 ### Key Components
-- `server.py` - Monolithic FastAPI backend with all routes
-- `context/AuthContext.js` - JWT auth state management
+- `server.py` - FastAPI app: middleware, exception handlers, router wiring, static serving
+- `auth.py` - Clerk JWKS fetch + `get_current_user` (RS256 verification)
+- `database.py` - Supabase client + Mongo-style collection wrapper
+- `routers/` - `auth`, `projects`, `tasks`, `memory`, `ai`, `stats`
+- `context/AuthContext.js` - Clerk-backed auth state management
 - `hooks/useAIStream.js` - Reusable SSE streaming hook for AI responses
 - `pages/LandingPage.js` - Cinematic animated landing page
 - `pages/AuthPage.js` - Login/Register with animated toggle
@@ -49,10 +57,10 @@ Developers and teams waste time on project planning, architecture decisions, and
 ## Features Implemented (Phase 1 — 2026-02)
 
 ### 1. Authentication System
-- Register / Login with JWT tokens
+- Register / Login handled client-side by Clerk
+- Backend verifies Clerk-issued RS256 JWTs against the Clerk JWKS endpoint
 - Protected routes with loading state
-- Admin seeding on startup
-- bcrypt password hashing
+- `mock_test_token` shortcut for tests — disabled when `ENVIRONMENT=production`
 
 ### 2. AI Project Architect
 - Free-form idea input
@@ -91,9 +99,15 @@ Developers and teams waste time on project planning, architecture decisions, and
 ## API Endpoints
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | /api/auth/register | No | Register user |
-| POST | /api/auth/login | No | Login |
+| POST | /api/auth/register | No | Returns 400 — registration is via Clerk on the client |
+| POST | /api/auth/login | No | Returns 400 — login is via Clerk on the client |
 | GET | /api/auth/me | Yes | Get current user |
+| GET | /api/tasks | Yes | List sprint tasks (limit/offset) |
+| POST | /api/tasks | Yes | Create task |
+| PUT | /api/tasks/:id | Yes | Update task (ownership-checked) |
+| DELETE | /api/tasks/:id | Yes | Delete task (ownership-checked) |
+| POST | /api/ai/sprint | Yes | Generate + persist a sprint plan |
+| POST | /api/memory/context | Yes | Ranked source preview for a query |
 | GET | /api/projects | Yes | List projects |
 | POST | /api/projects | Yes | Create project |
 | PUT | /api/projects/:id | Yes | Update project |
@@ -117,9 +131,10 @@ Developers and teams waste time on project planning, architecture decisions, and
 ## Backlog (Phase 2)
 
 ### P0 — Critical for production
-- [ ] Rate limiting on AI endpoints
-- [ ] Brute force protection on login
-- [ ] Error handling for OpenRouter API failures with retry
+- [x] Rate limiting on AI endpoints (per-user, slowapi)
+- [x] Error handling for OpenRouter API failures with model fallback + SSE error event
+- [ ] Enable Supabase RLS in production (migration in `backend/migrations/001_enable_rls.sql`)
+- [ ] Rotate the secrets that were previously committed to disk (Supabase service role, Clerk, OpenRouter)
 
 ### P1 — High value
 - [ ] Project detail page with full blueprint view
@@ -136,12 +151,13 @@ Developers and teams waste time on project planning, architecture decisions, and
 - [ ] AI activity feed with history
 
 ## Environment Variables
+See `backend/.env.example` for the template. Required:
 ```
-MONGO_URL=mongodb://localhost:27017
-DB_NAME=ghostboard_db
-JWT_SECRET=<random-64-char-hex>
-ADMIN_EMAIL=admin@ghostboard.ai
-ADMIN_PASSWORD=GhostBoard123!
+ENVIRONMENT=development            # set to "production" to disable mock_test_token
+SUPABASE_URL=<project-url>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>   # server-side only; bypasses RLS
+CLERK_SECRET_KEY=<clerk-secret>
+CLERK_JWKS_URL=<clerk-jwks-url>
 OPENROUTER_API_KEY=<user-provided>
-AI_MODEL=deepseek/deepseek-chat
+AI_MODEL=google/gemini-2.5-flash:free
 ```

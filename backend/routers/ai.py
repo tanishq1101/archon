@@ -2,6 +2,7 @@ import json
 import re
 import uuid
 import logging
+import jwt
 from datetime import datetime, timezone
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Depends, Request
@@ -13,12 +14,32 @@ from slowapi.util import get_remote_address
 
 from backend import config
 from backend.database import db
-from backend.auth import get_current_user
+from backend.auth import get_current_user, TEST_AUTH_ENABLED, MOCK_USERS
+from backend.memory_search import rank_docs
 
 logger = logging.getLogger(__name__)
 
-# Initialize rate limiter
-limiter = Limiter(key_func=get_remote_address)
+
+def _rate_limit_key(request: Request) -> str:
+    """Rate-limit by authenticated user so one user can't be throttled (or
+    spoofed) via a shared proxy IP. Falls back to the client IP for
+    unauthenticated requests."""
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header[7:] if auth_header.startswith("Bearer ") else None
+    if token:
+        try:
+            if TEST_AUTH_ENABLED and token in MOCK_USERS:
+                return f"user:{MOCK_USERS[token]['id']}"
+            sub = jwt.decode(token, options={"verify_signature": False}).get("sub")
+            if sub:
+                return f"user:{sub}"
+        except Exception:
+            pass
+    return get_remote_address(request)
+
+
+# Initialize rate limiter keyed on the authenticated user (IP fallback)
+limiter = Limiter(key_func=_rate_limit_key)
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
@@ -109,13 +130,17 @@ async def stream_openrouter(messages: list, model: str = None):
                             body = await response.aread()
                             logger.warning(f"Model {current_model} failed with status {response.status_code}: {body.decode(errors='ignore')}")
                             if current_model == models_to_try[-1]:
-                                yield f"data: {{\"choices\":[{{\"delta\":{{\"content\":\"Error: API returned {response.status_code}\"}}}}]}}\n\n"
+                                # Emit a distinct error event the frontend can style/handle
+                                # rather than impersonating model output.
+                                err_payload = json.dumps({"error": {"message": "The AI service is temporarily unavailable. Please try again."}})
+                                yield f"data: {err_payload}\n\n"
                                 yield "data: [DONE]\n\n"
                                 return
             except Exception as e:
                 logger.error(f"Error streaming from {current_model}: {e}")
                 if current_model == models_to_try[-1]:
-                    yield f"data: {{\"choices\":[{{\"delta\":{{\"content\":\"Stream error: {str(e)}\"}}}}]}}\n\n"
+                    err_payload = json.dumps({"error": {"message": "The AI service is temporarily unavailable. Please try again."}})
+                    yield f"data: {err_payload}\n\n"
                     yield "data: [DONE]\n\n"
                     return
 
@@ -441,19 +466,12 @@ async def ai_query_memory(request: Request, data: QueryRequest, current_user=Dep
         "user_id": current_user["id"], "type": "rag",
         "query": data.query[:200], "created_at": datetime.now(timezone.utc).isoformat()
     })
-    query_words = data.query.lower().split()
     q = {"user_id": current_user["id"]}
     if data.project_id:
         q["project_id"] = data.project_id
     docs = await db.memory_docs.find(q).to_list(100)
 
-    scored = []
-    for doc in docs:
-        score = sum(1 for w in query_words if w in doc.get("content", "").lower() or w in doc.get("title", "").lower())
-        if score > 0:
-            scored.append((score, doc))
-    scored.sort(key=lambda x: x[0], reverse=True)
-    top_docs = scored[:3]
+    top_docs = rank_docs(data.query, docs, 3)
 
     context = "\n\n---\n\n".join([f"**{d['title']}**\n{d['content'][:2000]}" for _, d in top_docs]) if top_docs else "No relevant documents found in knowledge base."
 
@@ -558,9 +576,15 @@ Sprint duration: {data.sprint_duration}"""
         raise HTTPException(status_code=500, detail="AI did not return parseable tasks. Try again.")
 
     try:
-        saved = []
+        def _safe_int(value, default):
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
+
+        tasks = []
         for t in raw_tasks:
-            task = {
+            tasks.append({
                 "id": str(uuid.uuid4()),
                 "user_id": current_user["id"],
                 "project_id": data.project_id or "",
@@ -568,15 +592,17 @@ Sprint duration: {data.sprint_duration}"""
                 "description": str(t.get("description", ""))[:500],
                 "status": "todo",
                 "priority": t.get("priority", "medium") if t.get("priority") in ["critical","high","medium","low"] else "medium",
-                "story_points": int(t.get("story_points", 3)),
-                "sprint": int(t.get("sprint", 1)),
+                "story_points": _safe_int(t.get("story_points"), 3),
+                "sprint": _safe_int(t.get("sprint"), 1),
                 "type": t.get("type", "feature") if t.get("type") in ["feature","bug","chore","research"] else "feature",
                 "created_at": datetime.now(timezone.utc).isoformat()
-            }
-            await db.sprint_tasks.insert_one(task)
-            task["_id"] = str(task["_id"])
-            saved.append(task)
-        return {"tasks": saved, "count": len(saved)}
+            })
+        # Persist the whole sprint in a single request: it either all lands or
+        # none of it does — no orphaned half-sprint on a mid-loop failure.
+        await db.sprint_tasks.insert_many(tasks)
+        for task in tasks:
+            task["_id"] = str(task.get("_id", task["id"]))
+        return {"tasks": tasks, "count": len(tasks)}
     except Exception as e:
         logger.error(f"Sprint saving/processing error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to save generated sprint tasks.")

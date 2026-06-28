@@ -1,3 +1,4 @@
+import os
 import logging
 import jwt
 import httpx
@@ -6,6 +7,28 @@ from jwt.algorithms import RSAAlgorithm
 from backend import config
 
 logger = logging.getLogger(__name__)
+
+# Test-only auth shortcut. ONLY honored outside production so it can never be
+# used to bypass Clerk against real user data. See server.py for the matching guard.
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "development")
+TEST_AUTH_ENABLED = ENVIRONMENT != "production"
+
+MOCK_USERS = {
+    "mock_test_token": {
+        "id": "test_clerk_user_123",
+        "email": "test_user@example.com",
+        "name": "Test User",
+        "role": "user",
+        "_id": "test_clerk_user_123",
+    },
+    "mock_test_token_2": {
+        "id": "test_clerk_user_456",
+        "email": "test_user_2@example.com",
+        "name": "Test User 2",
+        "role": "user",
+        "_id": "test_clerk_user_456",
+    },
+}
 
 clerk_keys = []
 
@@ -28,24 +51,10 @@ async def get_current_user(request: Request):
     
     if not token:
         raise HTTPException(status_code=401, detail="Missing authorization header")
-        
-    if token == "mock_test_token":
-        return {
-            "id": "test_clerk_user_123",
-            "email": "test_user@example.com",
-            "name": "Test User",
-            "role": "user",
-            "_id": "test_clerk_user_123"
-        }
-    if token == "mock_test_token_2":
-        return {
-            "id": "test_clerk_user_456",
-            "email": "test_user_2@example.com",
-            "name": "Test User 2",
-            "role": "user",
-            "_id": "test_clerk_user_456"
-        }
-        
+
+    if TEST_AUTH_ENABLED and token in MOCK_USERS:
+        return dict(MOCK_USERS[token])
+
     try:
         unverified_header = jwt.get_unverified_header(token)
         kid = unverified_header.get("kid")

@@ -15,7 +15,7 @@ from slowapi.errors import RateLimitExceeded
 
 # Import config, auth, and database to trigger startup validation and connect client
 from backend import config
-from backend.auth import fetch_clerk_keys
+from backend.auth import fetch_clerk_keys, TEST_AUTH_ENABLED, MOCK_USERS
 from backend.database import db
 
 # Import routers
@@ -86,8 +86,8 @@ async def logging_middleware(request: Request, call_next):
     token = auth_header[7:] if auth_header.startswith("Bearer ") else None
     if token:
         try:
-            if token == "mock_test_token":
-                user_id = "test_clerk_user_123"
+            if TEST_AUTH_ENABLED and token in MOCK_USERS:
+                user_id = MOCK_USERS[token]["id"]
             else:
                 unverified = jwt.decode(token, options={"verify_signature": False})
                 user_id = unverified.get("sub")
@@ -133,10 +133,12 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
+    # Log the full detail server-side only; never leak internals (stack/DB
+    # errors/key fragments) to the client.
     logger.exception("Unhandled server exception")
     return JSONResponse(
         status_code=500,
-        content={"error": "InternalServerError", "message": str(exc)}
+        content={"error": "InternalServerError", "message": "An internal server error occurred."}
     )
 
 # ========== HEALTH CHECK ==========

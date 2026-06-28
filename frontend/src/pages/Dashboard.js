@@ -5,6 +5,17 @@ import { Brain, Code2, Database, Plus, ArrowRight, FolderOpen, Zap, TrendingUp, 
 import axios from "axios";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
+import {
+    AlertDialog,
+    AlertDialogContent,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogCancel,
+    AlertDialogAction
+} from "@/components/ui/alert-dialog";
 
 const API = `${process.env.REACT_APP_BACKEND_URL || ""}/api`;
 
@@ -27,27 +38,28 @@ export default function Dashboard() {
     const [stats, setStats] = useState({ projects_count: 0, memory_count: 0, ai_queries_count: 0, recent_projects: [] });
     const [loading, setLoading] = useState(true);
     const [deletingId, setDeletingId] = useState(null);
+    const [projectToDelete, setProjectToDelete] = useState(null);
 
     const handleDeleteProject = async (projectId) => {
-        if (window.confirm("Are you sure you want to delete this project? This will permanently remove all associated architectural blueprints, sprint tasks, and context files.")) {
-            setDeletingId(projectId);
-            try {
-                const token = getToken();
-                await axios.delete(`${API}/projects/${projectId}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                
-                // Fetch stats again to update counts and list dynamically
-                const { data } = await axios.get(`${API}/stats`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setStats(data);
-            } catch (err) {
-                console.error("Failed to delete project:", err);
-                alert("Failed to delete project. Please try again.");
-            } finally {
-                setDeletingId(null);
-            }
+        setDeletingId(projectId);
+        try {
+            const token = getToken();
+            await axios.delete(`${API}/projects/${projectId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            // Fetch stats again to update counts and list dynamically
+            const { data } = await axios.get(`${API}/stats`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setStats(data);
+            toast.success("Project deleted successfully");
+        } catch (err) {
+            console.error("Failed to delete project:", err);
+            toast.error("Failed to delete project. Please try again.");
+        } finally {
+            setDeletingId(null);
+            setProjectToDelete(null);
         }
     };
 
@@ -172,7 +184,7 @@ export default function Dashboard() {
                                                 <button
                                                     onClick={(e) => {
                                                         e.preventDefault();
-                                                        handleDeleteProject(project.id);
+                                                        setProjectToDelete(project.id);
                                                     }}
                                                     disabled={deletingId === project.id}
                                                     className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
@@ -208,6 +220,25 @@ export default function Dashboard() {
                         </div>
                     </div>
                 </motion.div>
+                {/* AlertDialog for Project Deletion Confirmation */}
+                <AlertDialog open={!!projectToDelete} onOpenChange={(open) => !open && setProjectToDelete(null)}>
+                    <AlertDialogContent className="bg-[#18181B] border border-white/[0.08] text-white">
+                        <AlertDialogHeader>
+                            <AlertDialogTitle className="font-outfit text-white text-lg font-medium">Delete Project</AlertDialogTitle>
+                            <AlertDialogDescription className="text-zinc-400 font-manrope text-sm leading-relaxed">
+                                Are you sure you want to delete this project? This will permanently remove all associated architectural blueprints, sprint tasks, and context files.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="mt-4">
+                            <AlertDialogCancel className="bg-white/[0.05] border border-white/[0.08] hover:bg-white/10 text-zinc-300 px-4 py-2 rounded-lg font-manrope text-xs">
+                                Cancel
+                            </AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteProject(projectToDelete)} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-manrope text-xs border-0">
+                                Delete
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </main>
         </div>
     );

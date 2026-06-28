@@ -3,14 +3,9 @@ import { useAuth as useClerkAuth } from "@clerk/clerk-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL || ""}/api`;
 
-export function useAIStream(storageKey = null) {
+export function useAIStream() {
     const { getToken: getClerkToken } = useClerkAuth();
-    const [output, setOutput] = useState(() => {
-        if (storageKey) {
-            return localStorage.getItem(storageKey) || "";
-        }
-        return "";
-    });
+    const [output, setOutput] = useState("");
     const [isStreaming, setIsStreaming] = useState(false);
     const [error, setError] = useState(null);
 
@@ -18,21 +13,19 @@ export function useAIStream(storageKey = null) {
         setIsStreaming(true);
         setOutput("");
         setError(null);
-        if (storageKey) {
-            localStorage.removeItem(storageKey);
-        }
+
 
         let token = null;
         try {
+            // Mint a fresh in-memory token per request; never persist to localStorage.
             token = await getClerkToken();
-            if (token) {
-                localStorage.setItem("ghostboard_token", token);
-            }
         } catch (e) {
             console.error("Failed to get fresh Clerk token for stream:", e);
         }
         if (!token) {
-            token = localStorage.getItem("ghostboard_token");
+            setError("Your session has expired. Please sign in again.");
+            setIsStreaming(false);
+            return "";
         }
         let accumulated = "";
         try {
@@ -88,9 +81,7 @@ export function useAIStream(storageKey = null) {
                             accumulated += content;
                             setOutput((prev) => {
                                 const next = prev + content;
-                                if (storageKey) {
-                                    localStorage.setItem(storageKey, next);
-                                }
+
                                 return next;
                             });
                         }
@@ -104,15 +95,12 @@ export function useAIStream(storageKey = null) {
         } finally {
             setIsStreaming(false);
         }
-    }, [storageKey, getClerkToken]);
+    }, [getClerkToken]);
 
     const clear = useCallback(() => {
         setOutput("");
         setError(null);
-        if (storageKey) {
-            localStorage.removeItem(storageKey);
-        }
-    }, [storageKey]);
+    }, []);
 
     return { output, isStreaming, error, stream, clear };
 }

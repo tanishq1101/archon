@@ -83,8 +83,13 @@ android-sdk/
 .env
 .env.*
 *.env
+!.env.example
+!**/.env.example
 credentials.json
 *.key
 .credentials
 .gitconfig
 .claude/
+
+# Local manual helper (not for CI)
+backend/test_key.py

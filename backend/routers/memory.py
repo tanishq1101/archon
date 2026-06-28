@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from backend.database import db
 from backend.auth import get_current_user
+from backend.memory_search import rank_docs
 
 router = APIRouter(prefix="/memory", tags=["Memory"])
 
@@ -82,36 +83,21 @@ async def delete_memory_doc(doc_id: str, current_user=Depends(get_current_user))
 @router.post("/context")
 async def get_memory_context(data: SearchRequest, current_user=Depends(get_current_user)):
     """Returns ranked docs that match a query — used for pre-query source preview."""
-    query_words = [w for w in data.query.lower().split() if len(w) > 2]
-    if not query_words:
-        return {"docs": [], "total_searched": 0}
     q = {"user_id": current_user["id"]}
     if data.project_id:
         q["project_id"] = data.project_id
     docs = await db.memory_docs.find(q).to_list(200)
-    scored = []
-    for doc in docs:
-        score = sum(1 for w in query_words if w in doc.get("content", "").lower() or w in doc.get("title", "").lower())
-        if score > 0:
-            scored.append((score, doc))
-    scored.sort(key=lambda x: x[0], reverse=True)
-    result = [{"id": d["id"], "title": d["title"], "source_type": d["source_type"], "score": s, "word_count": d.get("word_count", 0)} for s, d in scored[:data.limit]]
+    scored = rank_docs(data.query, docs, data.limit, min_word_len=3)
+    result = [{"id": d["id"], "title": d["title"], "source_type": d["source_type"], "score": s, "word_count": d.get("word_count", 0)} for s, d in scored]
     return {"docs": result, "total_searched": len(docs)}
 
 @router.post("/search")
 async def search_memory_docs(data: SearchRequest, current_user=Depends(get_current_user)):
-    query_words = data.query.lower().split()
     q = {"user_id": current_user["id"]}
-    if project_id := data.project_id:
-        q["project_id"] = project_id
+    if data.project_id:
+        q["project_id"] = data.project_id
     docs = await db.memory_docs.find(q).to_list(500)
-    scored = []
-    for doc in docs:
-        score = sum(1 for w in query_words if w in doc.get("content", "").lower() or w in doc.get("title", "").lower())
-        if score > 0:
-            scored.append((score, doc))
-    scored.sort(key=lambda x: x[0], reverse=True)
-    results = [d for _, d in scored[:data.limit]]
+    results = [d for _, d in rank_docs(data.query, docs, data.limit)]
     for d in results:
         d["_id"] = str(d["_id"])
     return results
