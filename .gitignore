@@ -93,3 +93,4 @@ credentials.json
 
 # Local manual helper (not for CI)
 backend/test_key.py
+.env*

@@ -1,4 +1,14 @@
 import os
+import sys
+import types
+
+# Ensure imports of "backend.*" resolve correctly in flattened environments like Vercel
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if "backend" not in sys.modules:
+    backend_mock = types.ModuleType("backend")
+    backend_mock.__path__ = [current_dir]
+    sys.modules["backend"] = backend_mock
+
 import time
 import logging
 import jwt
