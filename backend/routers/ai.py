@@ -161,30 +161,30 @@ async def enhance_idea(request: Request, data: EnhanceIdeaRequest, current_user=
         "query": data.idea[:200], "created_at": datetime.now(timezone.utc).isoformat()
     })
     
-    system = """You are an elite Product Manager and Technical Lead for Archon AI.
-Your task is to take a simple, brief project idea and enhance it into a highly detailed, comprehensive, and well-structured project description. This enhanced description will serve as the prompt context for other AI systems to generate technical blueprints and sprint tasks.
+    system = """You are an elite product strategist. Your job is to sharpen and enrich a raw project idea into a focused, structured brief that an AI coding agent can immediately act on.
 
-Structure your response with the following Markdown headers:
-## Project Concept & Vision
-Explain the core purpose, target audience, and the main problem it solves.
+FORMATTING RULES (CRITICAL):
+- Never use # ## ### markdown heading syntax anywhere.
+- Use **Bold Label:** for each section title.
+- Use short bullet points (- ) for lists.
+- Keep the entire output to 120-160 words maximum. Dense and specific, not wordy.
 
-## Target User Personas
-Identify who will use this application and their primary goals.
+OUTPUT STRUCTURE (use exactly these bold labels):
+**Project Name:** A short, memorable name for the project (3-5 words max).
+**What it does:** One crisp sentence describing the core product.
+**Target users:** Who uses it and why.
+**Core features:**
+- Feature 1
+- Feature 2
+- Feature 3
+- Feature 4
+**Tech stack:** Recommended frontend, backend, database (one line each).
+**Key differentiator:** What makes this stand out in one sentence.
 
-## Core Modules & Functional Requirements
-Break down the main modules/features (at least 4-5 core elements) that must be implemented in the MVP.
-
-## Suggested Technical Stack
-Propose a modern frontend, backend, database, and hosting architecture that fits this scale.
-
-## Future AI & Scale Enhancements
-Identify how artificial intelligence (e.g. LLMs, predictive models, intelligence analysis) or scaling mechanisms can be integrated to add premium value.
-
-Constraints:
-- Be highly descriptive, specific, and professional.
-- Do NOT use generic placeholders or filler text.
-- Do NOT include greetings, introductions, or conversational preambles. Start directly with the first heading.
-- Aim for a comprehensive explanation of about 250-400 words."""
+CONSTRAINTS:
+- Be specific. No filler phrases like "robust", "seamless", "cutting-edge".
+- Start directly with **Project Name:** — no preamble, no greetings.
+- Every word must earn its place."""
 
     messages = [
         {"role": "system", "content": system},
@@ -309,7 +309,10 @@ This improves performance when used with coding agents and AI development tools.
 OUTPUT FORMAT
 You must first output a detailed project analysis section marked with:
 PROJECT UNDERSTANDING
-Provide a comprehensive explanation (2-3 paragraphs) of what the project is about, who it is for, what user requirements/goals it meets, and why this setup fits perfectly. End this section with: "Review the compiled stage prompts below to proceed."
+The FIRST line of PROJECT UNDERSTANDING must always be:
+**Project Name:** [A concise 2-5 word name that captures the essence of the project]
+
+Then provide a comprehensive explanation (2-3 paragraphs) of what the project is about, who it is for, what user requirements/goals it meets, and why this setup fits perfectly. End this section with: "Review the compiled stage prompts below to proceed."
 
 Then, output exactly three prompts:
 PROMPT 1

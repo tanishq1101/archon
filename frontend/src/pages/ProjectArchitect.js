@@ -227,14 +227,54 @@ export default function ProjectArchitect() {
         }
     }, [output, isStreaming]);
 
+    // Extracts a clean, readable project name from the AI-generated understanding
+    // or falls back to sanitizing the first sentence of the raw idea.
+    const extractProjectName = (blueprintText, rawIdea) => {
+        // Try to pull a concise name from the PROJECT UNDERSTANDING block
+        if (blueprintText) {
+            // Look for a "Project Name:" or "Name:" label in the understanding
+            const nameMatch = blueprintText.match(/(?:Project\s+Name|Name)\s*[:\-]\s*([^\n]{3,80})/i);
+            if (nameMatch) return nameMatch[1].trim();
+
+            // Try to extract from the first bold label **XYZ** in the understanding
+            const boldMatch = blueprintText.match(/\*\*([^*]{3,60})\*\*/);
+            if (boldMatch) return boldMatch[1].trim();
+
+            // Take the first clean sentence (up to 70 chars) from the understanding
+            const firstLine = blueprintText
+                .replace(/PROJECT UNDERSTANDING/i, "")
+                .replace(/^[#\s\-*]+/, "")
+                .trim()
+                .split(/[.\n]/)[0]
+                .trim();
+            if (firstLine && firstLine.length > 5) return firstLine.slice(0, 70);
+        }
+
+        // Fallback: sanitize the raw idea — strip markdown symbols and take first 60 chars
+        const cleaned = rawIdea
+            .replace(/#{1,6}\s*/g, "")   // remove ## headers
+            .replace(/\*{1,2}/g, "")      // remove ** bold
+            .replace(/^[-•]\s*/gm, "")   // remove bullet dashes
+            .trim()
+            .split(/[.\n]/)[0]
+            .trim();
+        return cleaned.slice(0, 65) || "Untitled Project";
+    };
+
     const autoSaveProject = async (blueprintText) => {
         if (!blueprintText || saving) return;
         setSaving(true);
         try {
             const token = getToken();
+            const { understanding: parsedUnderstanding } = parsePrompts(blueprintText);
+            const projectName = extractProjectName(parsedUnderstanding, idea);
             const { data } = await axios.post(`${API}/projects`, {
-                title: idea.slice(0, 60) || "Untitled Project",
-                description: idea,
+                title: projectName,
+                description: idea
+                    .replace(/#{1,6}\s*/g, "")
+                    .replace(/\*{1,2}/g, "")
+                    .trim()
+                    .slice(0, 200),
                 idea,
                 tech_stack: techPrefs,
             }, { headers: { Authorization: `Bearer ${token}` } });
