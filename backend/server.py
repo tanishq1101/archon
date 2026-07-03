@@ -68,10 +68,10 @@ app.state.limiter = limiter
 # ========== CORS CONFIGURATION ==========
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "development")
 if ENVIRONMENT == "production":
-    allow_origins = ["https://archon.ai"]
+    allow_origins = ["https://ghostboard.ai"]
 else:
     allow_origins = [
-        "https://archon.ai",
+        "https://ghostboard.ai",
         "http://localhost:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3000",
