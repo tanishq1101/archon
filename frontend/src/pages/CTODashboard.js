@@ -83,11 +83,11 @@ export default function CTODashboard() {
     const { getToken } = useAuth();
     const { output, isStreaming, error, stream, clear } = useAIStream();
     const [projects, setProjects] = useState([]);
-    const [selectedProjectId, setSelectedProjectId] = useState(() => localStorage.getItem("ghostboard_cto_selectedProjectId") || "");
-    const [question, setQuestion] = useState(() => localStorage.getItem("ghostboard_cto_question") || "");
-    const [context, setContext] = useState(() => localStorage.getItem("ghostboard_cto_context") || "");
-    const [category, setCategory] = useState(() => localStorage.getItem("ghostboard_cto_category") || "architecture");
-    const [techStack, setTechStack] = useState(() => localStorage.getItem("ghostboard_cto_techStack") || "");
+    const [selectedProjectId, setSelectedProjectId] = useState(() => localStorage.getItem("archon_cto_selectedProjectId") || "");
+    const [question, setQuestion] = useState(() => localStorage.getItem("archon_cto_question") || "");
+    const [context, setContext] = useState(() => localStorage.getItem("archon_cto_context") || "");
+    const [category, setCategory] = useState(() => localStorage.getItem("archon_cto_category") || "architecture");
+    const [techStack, setTechStack] = useState(() => localStorage.getItem("archon_cto_techStack") || "");
     const [copied, setCopied] = useState(false);
     const [history, setHistory] = useState([]);
     const outputRef = useRef(null);
@@ -95,31 +95,31 @@ export default function CTODashboard() {
 
     // Persist values to localStorage
     useEffect(() => {
-        localStorage.setItem("ghostboard_cto_selectedProjectId", selectedProjectId);
+        localStorage.setItem("archon_cto_selectedProjectId", selectedProjectId);
     }, [selectedProjectId]);
 
     useEffect(() => {
-        localStorage.setItem("ghostboard_cto_question", question);
+        localStorage.setItem("archon_cto_question", question);
     }, [question]);
 
     useEffect(() => {
-        localStorage.setItem("ghostboard_cto_context", context);
+        localStorage.setItem("archon_cto_context", context);
     }, [context]);
 
     useEffect(() => {
-        localStorage.setItem("ghostboard_cto_category", category);
+        localStorage.setItem("archon_cto_category", category);
     }, [category]);
 
     useEffect(() => {
-        localStorage.setItem("ghostboard_cto_techStack", techStack);
+        localStorage.setItem("archon_cto_techStack", techStack);
     }, [techStack]);
 
     const handleClear = () => {
         clear();
         setQuestion("");
         setContext("");
-        localStorage.removeItem("ghostboard_cto_question");
-        localStorage.removeItem("ghostboard_cto_context");
+        localStorage.removeItem("archon_cto_question");
+        localStorage.removeItem("archon_cto_context");
     };
 
     useEffect(() => {

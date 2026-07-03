@@ -1,4 +1,4 @@
-"""Automated integration tests for GhostBoard AI Clerk + Supabase Hybrid Backend"""
+"""Automated integration tests for Archon AI Clerk + Supabase Hybrid Backend"""
 import pytest
 import requests
 import os

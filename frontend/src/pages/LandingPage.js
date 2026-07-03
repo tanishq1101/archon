@@ -96,7 +96,7 @@ const steps = [
 
 const testimonials = [
     {
-        quote: "GhostBoard AI completely replaced our messy Notion planning. We went from a rough hackathon idea to 20 well-defined sprint issues in under 3 minutes.",
+        quote: "Archon AI completely replaced our messy Notion planning. We went from a rough hackathon idea to 20 well-defined sprint issues in under 3 minutes.",
         author: "Alex Rivers",
         role: "Lead Developer, HackMIT Winner",
         rating: 5,
@@ -120,7 +120,7 @@ const testimonials = [
         gradient: "from-fuchsia-500 to-pink-500"
     },
     {
-        quote: "GhostBoard's automated architecture prompts are pure gold. Running them through Cursor helped us build our MVP interface in a single weekend.",
+        quote: "Archon's automated architecture prompts are pure gold. Running them through Cursor helped us build our MVP interface in a single weekend.",
         author: "Elena Rostova",
         role: "Full-Stack Engineer, DevPost Alpha",
         rating: 5,
@@ -144,7 +144,7 @@ const testimonials = [
         gradient: "from-emerald-400 to-teal-500"
     },
     {
-        quote: "The interactive canvas particles combined with dark/light transitions give GhostBoard a premium, state-of-the-art developer workspace feel.",
+        quote: "The interactive canvas particles combined with dark/light transitions give Archon a premium, state-of-the-art developer workspace feel.",
         author: "Chloe Dubois",
         role: "Lead UI/UX Designer, PixelCraft",
         rating: 5,
@@ -164,13 +164,13 @@ const testimonials = [
 const faqs = [
     {
         id: "faq-1",
-        question: "What is GhostBoard AI?",
-        answer: "GhostBoard AI is an integrated, AI-powered autonomous project operating system. It streamlines project blueprints, expert CTO technical consultation, sprint ticketing, and documentation memory workspaces into a single cohesive platform."
+        question: "What is Archon AI?",
+        answer: "Archon AI is an integrated, AI-powered autonomous project operating system. It streamlines project blueprints, expert CTO technical consultation, sprint ticketing, and documentation memory workspaces into a single cohesive platform."
     },
     {
         id: "faq-2",
         question: "How does the RAG Memory system work?",
-        answer: "You can upload documentation, notes, or APIs in plain text. GhostBoard AI indexes this knowledge so that any queries you perform in the memory console or architecture generations are specifically grounded in your uploaded reference material."
+        answer: "You can upload documentation, notes, or APIs in plain text. Archon AI indexes this knowledge so that any queries you perform in the memory console or architecture generations are specifically grounded in your uploaded reference material."
     },
     {
         id: "faq-3",
@@ -179,7 +179,7 @@ const faqs = [
     },
     {
         id: "faq-4",
-        question: "Is GhostBoard AI free to use?",
+        question: "Is Archon AI free to use?",
         answer: "Yes! We offer a fully-featured free tier tailored for hackathon teams and individual developer projects. Upgrade tiers are available for advanced collaboration and increased rate limits."
     },
     {
@@ -200,7 +200,7 @@ export default function LandingPage() {
 
     const [showSplash, setShowSplash] = useState(() => {
         if (typeof window !== "undefined") {
-            return !sessionStorage.getItem("spectreflow_splash_shown");
+            return !sessionStorage.getItem("archon_splash_shown");
         }
         return true;
     });
@@ -209,7 +209,7 @@ export default function LandingPage() {
         if (showSplash) {
             const timer = setTimeout(() => {
                 setShowSplash(false);
-                sessionStorage.setItem("spectreflow_splash_shown", "true");
+                sessionStorage.setItem("archon_splash_shown", "true");
             }, 3000);
             return () => clearTimeout(timer);
         }
@@ -349,7 +349,7 @@ export default function LandingPage() {
 
                             {/* App Name */}
                             <div className="flex overflow-hidden">
-                                {"SpectreFlow".split("").map((letter, i) => (
+                                {"Archon".split("").map((letter, i) => (
                                     <motion.span
                                         key={i}
                                         initial={{ y: 50, opacity: 0 }}
@@ -398,7 +398,7 @@ export default function LandingPage() {
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-cyan-400 flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.4)]">
                             <Sparkles className="w-4 h-4 text-white" />
                         </div>
-                        <span className="font-outfit font-semibold text-zinc-900 dark:text-white text-lg">SpectreFlow AI</span>
+                        <span className="font-outfit font-semibold text-zinc-900 dark:text-white text-lg">Archon AI</span>
                     </Link>
 
                     {/* Navigation Links */}
@@ -483,7 +483,7 @@ export default function LandingPage() {
                             className="font-manrope text-base sm:text-lg text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed"
                             data-testid="hero-subtitle"
                         >
-                            GhostBoard AI automates the cognitive overhead of project design. 
+                            Archon AI automates the cognitive overhead of project design.
                             Instantly plan architectures, generate detailed sprint backlogs, and run context-grounded document queries.
                         </motion.p>
 
@@ -541,7 +541,7 @@ export default function LandingPage() {
                                 <span className="gradient-text-alt">Illuminated Intelligence</span>
                             </h2>
                             <p className="font-manrope text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                                Traditional project management software forces you to manually construct spreadsheets, tasks, and documentation. GhostBoard AI flips the model. 
+                                Traditional project management software forces you to manually construct spreadsheets, tasks, and documentation. Archon AI flips the model.
                                 By integrating contextual RAG memory and autonomous sprint planners directly into your technical workspace, we eliminate the cognitive overhead of coding structure.
                             </p>
                             <div className="space-y-4 pt-4">
@@ -578,7 +578,7 @@ export default function LandingPage() {
                                 {/* Small visual node representation */}
                                 <div className="space-y-4 font-mono text-xs">
                                     <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/[0.08] pb-3">
-                                        <span className="text-zinc-400 dark:text-zinc-500">ghostboard_orchestrator.py</span>
+                                        <span className="text-zinc-400 dark:text-zinc-500">archon_orchestrator.py</span>
                                         <div className="flex gap-1.5">
                                             <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
                                             <span className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
@@ -588,7 +588,7 @@ export default function LandingPage() {
                                     <div className="space-y-2 text-zinc-600 dark:text-zinc-400">
                                         <p className="text-purple-600 dark:text-purple-400"># Ingesting documentation reference context...</p>
                                         <p className="text-zinc-800 dark:text-zinc-200">{"{"}</p>
-                                        <p className="pl-4">"project": "GhostBoard AI Core",</p>
+                                        <p className="pl-4">"project": "Archon AI Core",</p>
                                         <p className="pl-4">"database": "Supabase PostgreSQL",</p>
                                         <p className="pl-4 text-cyan-600 dark:text-cyan-400">"status": "Generating sprint cards..."</p>
                                         <p className="text-zinc-800 dark:text-zinc-200">{"}"}</p>
@@ -655,12 +655,12 @@ export default function LandingPage() {
                                     AI Project Architect
                                 </h3>
                                 <p className="font-manrope text-sm sm:text-base text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                                    The **AI Project Architect** converts a simple sentence or a rough project requirements dump into a structured, production-grade technical design blueprint. It recommends optimized folders, databases, and authentication paradigms.
+                                    The <strong>AI Project Architect</strong> converts a simple sentence or a rough project requirements dump into a structured, production-grade technical design blueprint. It recommends optimized folders, databases, and authentication paradigms.
                                 </p>
                                 <div className="p-4 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/[0.05] space-y-2.5">
                                     <h4 className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wide">How to use:</h4>
                                     <p className="font-manrope text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                                        Type in your project concept, select preferred technologies (e.g. Next.js, FastAPI, Supabase), and click **Compile**. Copy the generated prompts for <strong>Plan</strong>, <strong>Build</strong>, and <strong>Test</strong> directly into coding agents (such as Cursor, Windsurf, or Copilot) to scaffold your codebase instantly.
+                                        Type in your project concept, select preferred technologies (e.g. Next.js, FastAPI, Supabase), and click <strong>Compile</strong>. Copy the generated prompts for <strong>Plan</strong>, <strong>Build</strong>, and <strong>Test</strong> directly into coding agents (such as Cursor, Windsurf, or Copilot) to scaffold your codebase instantly.
                                     </p>
                                 </div>
                                 <button
@@ -730,7 +730,7 @@ export default function LandingPage() {
                                     AI CTO Console
                                 </h3>
                                 <p className="font-manrope text-sm sm:text-base text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                                    The **AI CTO Console** serves as your battle-tested software architect. When deciding on system scalability, database architectures, auth flows, or performance indexing, get clear, logical recommendations and concrete code templates instantly.
+                                    The <strong>AI CTO Console</strong> serves as your battle-tested software architect. When deciding on system scalability, database architectures, auth flows, or performance indexing, get clear, logical recommendations and concrete code templates instantly.
                                 </p>
                                 <div className="p-4 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/[0.05] space-y-2.5">
                                     <h4 className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 uppercase tracking-wide">How to use:</h4>
@@ -763,12 +763,12 @@ export default function LandingPage() {
                                     RAG Memory System
                                 </h3>
                                 <p className="font-manrope text-sm sm:text-base text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                                    AI models frequently hallucinate when using private libraries, custom SDKs, or internal templates. The **Memory System** resolves this by integrating custom documents directly into your AI context, ensuring 100% accurate code output.
+                                    AI models frequently hallucinate when using private libraries, custom SDKs, or internal templates. The <strong>Memory System</strong> resolves this by integrating custom documents directly into your AI context, ensuring 100% accurate code output.
                                 </p>
                                 <div className="p-4 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/[0.05] space-y-2.5">
                                     <h4 className="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide">How to use:</h4>
                                     <p className="font-manrope text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                                        Upload plaintext files, API documentation, or code guidelines under the **Memory** workspace. Any queries you run or blueprints you generate will reference this context first to match your styles and variables.
+                                        Upload plaintext files, API documentation, or code guidelines under the <strong>Memory</strong> workspace. Any queries you run or blueprints you generate will reference this context first to match your styles and variables.
                                     </p>
                                 </div>
                                 <button
@@ -817,7 +817,7 @@ export default function LandingPage() {
                             >
                                 <div className="absolute top-0 left-0 w-24 h-24 bg-fuchsia-500/10 rounded-full blur-2xl pointer-events-none" />
                                 <div className="flex items-center justify-between mb-4 border-b border-zinc-200 dark:border-white/[0.08] pb-3">
-                                    <span className="text-xs font-mono text-zinc-400">Kanban Board Board</span>
+                                    <span className="text-xs font-mono text-zinc-400">Kanban Board</span>
                                     <span className="text-[10px] bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 px-2 py-0.5 rounded font-mono font-semibold">SPRINT 1</span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3 font-mono text-[10px]">
@@ -848,12 +848,12 @@ export default function LandingPage() {
                                     AI Sprint Planner
                                 </h3>
                                 <p className="font-manrope text-sm sm:text-base text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                                    The **AI Sprint Planner** bridges system design with daily Agile tasks. Based on your project blueprint and team capacity, the AI generates 15-25 story-pointed tasks sorted into sprint tabs and maps them onto a drag-and-drop Kanban board.
+                                    The <strong>AI Sprint Planner</strong> bridges system design with daily Agile tasks. Based on your project blueprint and team capacity, the AI generates 15-25 story-pointed tasks sorted into sprint tabs and maps them onto a drag-and-drop Kanban board.
                                 </p>
                                 <div className="p-4 rounded-xl bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/[0.05] space-y-2.5">
                                     <h4 className="text-xs font-semibold text-fuchsia-600 dark:text-fuchsia-400 uppercase tracking-wide">How to use:</h4>
                                     <p className="font-manrope text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                                        Open the **Sprint** workspace, paste your project specifications, set your target sprint duration, and generate tasks. Drag tickets between Backlog, In Progress, In Review, and Done columns to track velocity.
+                                        Open the <strong>Sprint</strong> workspace, paste your project specifications, set your target sprint duration, and generate tasks. Drag tickets between Backlog, In Progress, In Review, and Done columns to track velocity.
                                     </p>
                                 </div>
                                 <button
@@ -880,7 +880,7 @@ export default function LandingPage() {
                     >
                         <p className="font-manrope text-xs tracking-[0.3em] uppercase text-zinc-400 dark:text-zinc-500 mb-4">Workflow</p>
                         <h2 className="font-outfit text-4xl sm:text-5xl tracking-tight font-medium text-zinc-900 dark:text-white">
-                            How GhostBoard Works
+                            How Archon AI Works
                         </h2>
                     </motion.div>
 
@@ -1051,7 +1051,7 @@ export default function LandingPage() {
                             <div className="w-6 h-6 rounded bg-gradient-to-br from-purple-500 to-cyan-400 flex items-center justify-center shadow-[0_0_10px_rgba(139,92,246,0.3)]">
                                 <Sparkles className="w-3.5 h-3.5 text-white" />
                             </div>
-                            <span className="font-outfit text-zinc-900 dark:text-white font-semibold text-base">GhostBoard AI</span>
+                            <span className="font-outfit text-zinc-900 dark:text-white font-semibold text-base">Archon AI</span>
                         </div>
                         <p className="font-manrope text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
                             The autonomous project operating system mapping system designs and sprint backlogs instantly. Built for hackathon winners and technical founders.
@@ -1084,7 +1084,7 @@ export default function LandingPage() {
                         <ul className="font-manrope text-xs space-y-2.5 text-zinc-500 dark:text-zinc-400">
                             <li className="flex items-center gap-2">
                                 <Mail className="w-3.5 h-3.5 text-purple-500" />
-                                <a href="mailto:support@ghostboard.ai" className="hover:text-purple-500 transition-colors">support@ghostboard.ai</a>
+                                <a href="mailto:support@archon.ai" className="hover:text-purple-500 transition-colors">support@archon.ai</a>
                             </li>
                             <li className="flex items-center gap-2">
                                 <Github className="w-3.5 h-3.5 text-zinc-400" />
@@ -1092,7 +1092,7 @@ export default function LandingPage() {
                             </li>
                             <li className="flex items-center gap-2">
                                 <Twitter className="w-3.5 h-3.5 text-cyan-400" />
-                                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-purple-500 transition-colors">@GhostBoardAI</a>
+                                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-purple-500 transition-colors">@ArchonAI</a>
                             </li>
                         </ul>
                     </div>
@@ -1100,10 +1100,10 @@ export default function LandingPage() {
 
                 <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-zinc-200 dark:border-white/[0.05] flex flex-col sm:flex-row justify-between items-center gap-4">
                     <p className="font-manrope text-[11px] text-zinc-500 dark:text-zinc-600">
-                        &copy; 2026 GhostBoard AI. All rights reserved. Made by founders for builders.
+                        &copy; 2026 Archon AI. All rights reserved. Made by founders for builders.
                     </p>
                     <p className="font-manrope text-[11px] text-zinc-400 dark:text-zinc-500">
-                        Powered by DeepMind and OpenRouter.
+                        Powered by DeepSeek &amp; OpenRouter.
                     </p>
                 </div>
             </footer>

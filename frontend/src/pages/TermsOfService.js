@@ -17,7 +17,7 @@ export default function TermsOfService() {
             title: "1. Acceptance of Terms",
             content: (
                 <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
-                    By creating an account, accessing the dashboard, or utilizing the GhostBoard AI technical project management tools, you agree to comply with and be bound by these Terms of Service. If you do not accept these terms, you may not utilize any workspaces, API endpoints, or AI capabilities hosted on GhostBoard.
+                    By creating an account, accessing the dashboard, or utilizing the Archon AI technical project management tools, you agree to comply with and be bound by these Terms of Service. If you do not accept these terms, you may not utilize any workspaces, API endpoints, or AI capabilities hosted on Archon.
                 </p>
             )
         },
@@ -27,10 +27,10 @@ export default function TermsOfService() {
             content: (
                 <div className="space-y-3">
                     <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
-                        GhostBoard AI uses large language models (via OpenRouter) to generate sprint plans, architecture layouts, and advice.
+                        Archon AI uses large language models (via OpenRouter) to generate sprint plans, architecture layouts, and advice.
                     </p>
                     <ul className="list-disc pl-5 space-y-1.5 text-zinc-600 dark:text-zinc-400 text-sm">
-                        <li><strong>No Guarantee of Accuracy:</strong> Architectural plans and sprint tickets are recommendations. GhostBoard AI does not warrant that AI-generated code will build or compile error-free.</li>
+                        <li><strong>No Guarantee of Accuracy:</strong> Architectural plans and sprint tickets are recommendations. Archon AI does not warrant that AI-generated code will build or compile error-free.</li>
                         <li><strong>Output Ownership:</strong> You own the copyright to all outputs and designs generated for your projects. However, you are solely responsible for verifying the security, license compatibility, and correctness of those outputs.</li>
                         <li><strong>Input Integrity:</strong> You represent that you own or have the rights to upload any codebases, URLs, or notes into the RAG memory system.</li>
                     </ul>
@@ -67,7 +67,7 @@ export default function TermsOfService() {
             title: "5. Limitation of Liability & Disclaimers",
             content: (
                 <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
-                    GhostBoard AI is provided on an "as is" and "as available" basis without any express or implied warranties. In no event shall GhostBoard, its affiliates, or LLM providers be held liable for any direct, indirect, incidental, or consequential damages resulting from database connectivity losses, inaccurate AI advice, server downtime, or project delivery delays.
+                    Archon AI is provided on an "as is" and "as available" basis without any express or implied warranties. In no event shall Archon, its affiliates, or LLM providers be held liable for any direct, indirect, incidental, or consequential damages resulting from database connectivity losses, inaccurate AI advice, server downtime, or project delivery delays.
                 </p>
             )
         }
@@ -107,7 +107,7 @@ export default function TermsOfService() {
                     <div className="space-y-4">
                         <h2 className="font-outfit text-xl font-medium text-zinc-900 dark:text-white">Introduction</h2>
                         <p className="font-manrope text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
-                            Welcome to GhostBoard AI. By using our website, services, database configurations, and AI generation tools, you agree to accept these terms in full. These terms outline how we manage account access, limit technical liabilities, and define the boundaries of project planning features.
+                            Welcome to Archon AI. By using our website, services, database configurations, and AI generation tools, you agree to accept these terms in full. These terms outline how we manage account access, limit technical liabilities, and define the boundaries of project planning features.
                         </p>
                     </div>
 
@@ -137,7 +137,7 @@ export default function TermsOfService() {
 
                     {/* Bottom disclaimer */}
                     <div className="p-4 rounded-xl bg-cyan-500/5 border border-cyan-500/10 dark:bg-cyan-500/10 dark:border-cyan-500/20 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-manrope">
-                        <strong>Governing Law:</strong> These terms shall be governed by and construed in accordance with the local laws, without giving effect to any principles of conflicts of law. Any legal action arising from these terms shall be filed in governing local courts. Contact <strong>legal@ghostboard.ai</strong> for corporate queries.
+                        <strong>Governing Law:</strong> These terms shall be governed by and construed in accordance with the local laws, without giving effect to any principles of conflicts of law. Any legal action arising from these terms shall be filed in governing local courts. Contact <strong>legal@archon.ai</strong> for corporate queries.
                     </div>
                 </div>
             </div>

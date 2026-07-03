@@ -18,7 +18,7 @@ export default function PrivacyPolicy() {
             content: (
                 <div className="space-y-3">
                     <p className="text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
-                        At GhostBoard AI, we collect information to provide a better, more optimized technical workspace. This includes:
+                        At Archon AI, we collect information to provide a better, more optimized technical workspace. This includes:
                     </p>
                     <ul className="list-disc pl-5 space-y-1.5 text-zinc-600 dark:text-zinc-400 text-sm">
                         <li><strong>Account Credentials:</strong> Information provided during registration such as name, email address, and authentication tokens via Clerk.</li>
@@ -114,7 +114,7 @@ export default function PrivacyPolicy() {
                     <div className="space-y-4">
                         <h2 className="font-outfit text-xl font-medium text-zinc-900 dark:text-white">Introduction</h2>
                         <p className="font-manrope text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
-                            GhostBoard AI (referred to as "we", "our", or "GhostBoard") is committed to respecting and protecting the privacy of developer teams and individual developers. This Privacy Policy describes how we collect, process, index, and safeguard data in connection with our AI project architect workspace, CTO advisory console, and RAG knowledge-base operations.
+                            Archon AI (referred to as "we", "our", or "Archon") is committed to respecting and protecting the privacy of developer teams and individual developers. This Privacy Policy describes how we collect, process, index, and safeguard data in connection with our AI project architect workspace, CTO advisory console, and RAG knowledge-base operations.
                         </p>
                     </div>
 
@@ -146,7 +146,7 @@ export default function PrivacyPolicy() {
                     <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/10 dark:bg-purple-500/10 dark:border-purple-500/20 flex gap-3">
                         <CheckCircle2 className="w-5 h-5 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
                         <div className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-manrope">
-                            <strong>GDPR & Compliance:</strong> If you are accessing this workspace from the European Economic Area (EEA), we act as a Data Controller for registration identifiers and a Data Processor for custom workspace data. If you have any inquiries, contact support at <strong>privacy@ghostboard.ai</strong>.
+                            <strong>GDPR & Compliance:</strong> If you are accessing this workspace from the European Economic Area (EEA), we act as a Data Controller for registration identifiers and a Data Processor for custom workspace data. If you have any inquiries, contact support at <strong>privacy@archon.ai</strong>.
                         </div>
                     </div>
                 </div>

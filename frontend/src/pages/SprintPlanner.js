@@ -265,7 +265,7 @@ export default function SprintPlanner() {
     // Goal persistence logic
     useEffect(() => {
         if (activeSprint !== "all") {
-            const key = `ghostboard_goal_${selectedProjectId || "global"}_sprint_${activeSprint}`;
+            const key = `archon_goal_${selectedProjectId || "global"}_sprint_${activeSprint}`;
             const savedGoal = localStorage.getItem(key);
             if (savedGoal !== null) {
                 setSprintGoal(savedGoal);
@@ -287,7 +287,7 @@ export default function SprintPlanner() {
     }, [activeSprint, selectedProjectId]);
 
     const handleSaveGoal = () => {
-        const key = `ghostboard_goal_${selectedProjectId || "global"}_sprint_${activeSprint}`;
+        const key = `archon_goal_${selectedProjectId || "global"}_sprint_${activeSprint}`;
         localStorage.setItem(key, goalInput);
         setSprintGoal(goalInput);
         setIsEditingGoal(false);

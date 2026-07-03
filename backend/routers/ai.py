@@ -111,8 +111,8 @@ async def stream_openrouter(messages: list, model: str = None):
                         headers={
                             "Authorization": f"Bearer {config.OPENROUTER_API_KEY}",
                             "Content-Type": "application/json",
-                            "HTTP-Referer": "https://ghostboard.ai",
-                            "X-Title": "GhostBoard AI"
+                            "HTTP-Referer": "https://archon.ai",
+                            "X-Title": "Archon AI"
                         },
                         json={
                             "model": current_model,
@@ -161,7 +161,7 @@ async def enhance_idea(request: Request, data: EnhanceIdeaRequest, current_user=
         "query": data.idea[:200], "created_at": datetime.now(timezone.utc).isoformat()
     })
     
-    system = """You are an elite Product Manager and Technical Lead for GhostBoard AI.
+    system = """You are an elite Product Manager and Technical Lead for Archon AI.
 Your task is to take a simple, brief project idea and enhance it into a highly detailed, comprehensive, and well-structured project description. This enhanced description will serve as the prompt context for other AI systems to generate technical blueprints and sprint tasks.
 
 Structure your response with the following Markdown headers:
@@ -392,6 +392,17 @@ Avoid:
 Generate prompts that are concise but complete.
 
 ---
+FORMATTING RULES (CRITICAL)
+Never use markdown heading syntax inside the prompts.
+Do NOT use #, ##, or ### anywhere.
+Instead:
+- Use **Bold Label:** for section titles (e.g. **Tech Stack:** or **1. Setup Architecture:**)
+- Use numbered lists (1. 2. 3.) for sequential steps
+- Use bullet points (-) for non-sequential items
+- Use plain line breaks to separate sections
+This ensures the prompts are clean and readable when pasted into coding agents like Cursor, Windsurf, and Copilot.
+
+---
 OUTPUT RESTRICTIONS
 Never explain your reasoning outside the PROJECT UNDERSTANDING.
 Never explain what was optimized.
@@ -436,7 +447,7 @@ async def ai_cto(request: Request, data: CTORequest, current_user=Depends(get_cu
         "user_id": current_user["id"], "type": "cto",
         "query": data.question[:200], "created_at": datetime.now(timezone.utc).isoformat()
     })
-    system = """You are an elite AI CTO and Principal Technical Advisor for GhostBoard AI.
+    system = """You are an elite AI CTO and Principal Technical Advisor for Archon AI.
 
 You provide expert technical guidance on:
 - System architecture and design patterns
@@ -475,7 +486,7 @@ async def ai_query_memory(request: Request, data: QueryRequest, current_user=Dep
 
     context = "\n\n---\n\n".join([f"**{d['title']}**\n{d['content'][:2000]}" for _, d in top_docs]) if top_docs else "No relevant documents found in knowledge base."
 
-    system_prompt = """You are an AI knowledge base assistant for GhostBoard AI. Answer questions using ONLY the provided context documents.
+    system_prompt = """You are an AI knowledge base assistant for Archon AI. Answer questions using ONLY the provided context documents.
 
 Guidelines:
 - Be specific and reference actual content from the documents
@@ -549,8 +560,8 @@ Sprint duration: {data.sprint_duration}"""
                     headers={
                         "Authorization": f"Bearer {config.OPENROUTER_API_KEY}",
                         "Content-Type": "application/json",
-                        "HTTP-Referer": "https://ghostboard.ai",
-                        "X-Title": "GhostBoard AI"
+                        "HTTP-Referer": "https://archon.ai",
+                        "X-Title": "Archon AI"
                     },
                     json={"model": current_model, "messages": [
                         {"role": "system", "content": system},

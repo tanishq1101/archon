@@ -33,7 +33,7 @@ export default function Navbar() {
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-cyan-400 flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.4)]">
                         <Sparkles className="w-4 h-4 text-white" />
                     </div>
-                    <span className="font-outfit font-semibold text-white text-base hidden sm:block">SpectreFlow AI</span>
+                    <span className="font-outfit font-semibold text-white text-base hidden sm:block">Archon AI</span>
                 </Link>
 
                 {/* Desktop Nav */}

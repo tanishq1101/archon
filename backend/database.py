@@ -174,10 +174,10 @@ class SupabaseCollectionWrapper:
 
 class MockDatabase:
     def __init__(self):
-        self.projects = SupabaseCollectionWrapper("ghostboard_projects")
-        self.sprint_tasks = SupabaseCollectionWrapper("ghostboard_tasks")
-        self.memory_docs = SupabaseCollectionWrapper("ghostboard_memory_docs")
-        self.ai_queries = SupabaseCollectionWrapper("ghostboard_ai_queries")
-        self.users = SupabaseCollectionWrapper("ghostboard_users")
+        self.projects = SupabaseCollectionWrapper("archon_projects")
+        self.sprint_tasks = SupabaseCollectionWrapper("archon_tasks")
+        self.memory_docs = SupabaseCollectionWrapper("archon_memory_docs")
+        self.ai_queries = SupabaseCollectionWrapper("archon_ai_queries")
+        self.users = SupabaseCollectionWrapper("archon_users")
 
 db = MockDatabase()

@@ -131,20 +131,20 @@ export default function ProjectArchitect() {
         clear: clearEnhance
     } = useAIStream();
 
-    const [idea, setIdea] = useState(() => localStorage.getItem("ghostboard_architect_idea") || "");
+    const [idea, setIdea] = useState(() => localStorage.getItem("archon_architect_idea") || "");
     const [techPrefs, setTechPrefs] = useState(() => {
         try {
-            const val = localStorage.getItem("ghostboard_architect_techPrefs");
+            const val = localStorage.getItem("archon_architect_techPrefs");
             return val ? JSON.parse(val) : [];
         } catch {
             return [];
         }
     });
     const [teamSize, setTeamSize] = useState(() => {
-        const val = localStorage.getItem("ghostboard_architect_teamSize");
+        const val = localStorage.getItem("archon_architect_teamSize");
         return val ? Number(val) : 1;
     });
-    const [timeline, setTimeline] = useState(() => localStorage.getItem("ghostboard_architect_timeline") || "4 weeks");
+    const [timeline, setTimeline] = useState(() => localStorage.getItem("archon_architect_timeline") || "4 weeks");
     const [customTech, setCustomTech] = useState("");
     
     // Copy states
@@ -156,10 +156,13 @@ export default function ProjectArchitect() {
 
     const [saving, setSaving] = useState(false);
     const [savedProjectId, setSavedProjectId] = useState(() => {
-        return localStorage.getItem("ghostboard_architect_savedProjectId") || null;
+        return localStorage.getItem("archon_architect_savedProjectId") || null;
     });
-    const [activeTab, setActiveTab] = useState(() => localStorage.getItem("ghostboard_architect_activeTab") || "understanding");
+    const [activeTab, setActiveTab] = useState(() => localStorage.getItem("archon_architect_activeTab") || "understanding");
     const outputRef = useRef(null);
+
+    // Enhance preview state — shows a preview panel instead of overwriting the idea directly
+    const [showEnhancePreview, setShowEnhancePreview] = useState(false);
 
     const autoSwitchedRef = useRef({
         prompt1: false,
@@ -168,31 +171,31 @@ export default function ProjectArchitect() {
     });
 
     useEffect(() => {
-        localStorage.setItem("ghostboard_architect_idea", idea);
+        localStorage.setItem("archon_architect_idea", idea);
     }, [idea]);
 
     useEffect(() => {
-        localStorage.setItem("ghostboard_architect_techPrefs", JSON.stringify(techPrefs));
+        localStorage.setItem("archon_architect_techPrefs", JSON.stringify(techPrefs));
     }, [techPrefs]);
 
     useEffect(() => {
-        localStorage.setItem("ghostboard_architect_teamSize", teamSize.toString());
+        localStorage.setItem("archon_architect_teamSize", teamSize.toString());
     }, [teamSize]);
 
     useEffect(() => {
-        localStorage.setItem("ghostboard_architect_timeline", timeline);
+        localStorage.setItem("archon_architect_timeline", timeline);
     }, [timeline]);
 
     useEffect(() => {
         if (savedProjectId) {
-            localStorage.setItem("ghostboard_architect_savedProjectId", savedProjectId.toString());
+            localStorage.setItem("archon_architect_savedProjectId", savedProjectId.toString());
         } else {
-            localStorage.removeItem("ghostboard_architect_savedProjectId");
+            localStorage.removeItem("archon_architect_savedProjectId");
         }
     }, [savedProjectId]);
 
     useEffect(() => {
-        localStorage.setItem("ghostboard_architect_activeTab", activeTab);
+        localStorage.setItem("archon_architect_activeTab", activeTab);
     }, [activeTab]);
 
     useEffect(() => {
@@ -201,11 +204,12 @@ export default function ProjectArchitect() {
         }
     }, [output, isStreaming]);
 
+    // When enhance streaming finishes, show the preview panel
     useEffect(() => {
-        if (enhancedIdeaOutput) {
-            setIdea(enhancedIdeaOutput);
+        if (enhancedIdeaOutput && !isEnhancingIdea) {
+            setShowEnhancePreview(true);
         }
-    }, [enhancedIdeaOutput]);
+    }, [enhancedIdeaOutput, isEnhancingIdea]);
 
     // Auto switch tabs based on streaming headers, only once per run
     useEffect(() => {
@@ -275,6 +279,8 @@ export default function ProjectArchitect() {
 
     const handleClear = () => {
         clear();
+        clearEnhance();
+        setShowEnhancePreview(false);
         setIdea("");
         setTechPrefs([]);
         setTeamSize(1);
@@ -283,12 +289,12 @@ export default function ProjectArchitect() {
         setSavedProjectId(null);
         setActiveTab("understanding");
 
-        localStorage.removeItem("ghostboard_architect_idea");
-        localStorage.removeItem("ghostboard_architect_techPrefs");
-        localStorage.removeItem("ghostboard_architect_teamSize");
-        localStorage.removeItem("ghostboard_architect_timeline");
-        localStorage.removeItem("ghostboard_architect_savedProjectId");
-        localStorage.removeItem("ghostboard_architect_activeTab");
+        localStorage.removeItem("archon_architect_idea");
+        localStorage.removeItem("archon_architect_techPrefs");
+        localStorage.removeItem("archon_architect_teamSize");
+        localStorage.removeItem("archon_architect_timeline");
+        localStorage.removeItem("archon_architect_savedProjectId");
+        localStorage.removeItem("archon_architect_activeTab");
     };
 
     const handleDownloadTab = (text, filename) => {
@@ -408,6 +414,42 @@ export default function ProjectArchitect() {
                             {enhanceError && (
                                 <div className="mt-2 text-xs text-red-400 font-manrope">
                                     {enhanceError}
+                                </div>
+                            )}
+
+                            {/* Enhance Preview Panel */}
+                            {showEnhancePreview && enhancedIdeaOutput && !isEnhancingIdea && (
+                                <div className="mt-3 p-3.5 rounded-xl bg-purple-500/[0.06] border border-purple-500/20">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-semibold text-purple-300 font-manrope flex items-center gap-1.5">
+                                            <Sparkles className="w-3 h-3 text-purple-400" />
+                                            AI Enhancement Ready
+                                        </span>
+                                        <button
+                                            onClick={() => { clearEnhance(); setShowEnhancePreview(false); }}
+                                            className="p-0.5 rounded text-zinc-600 hover:text-zinc-400 transition-colors"
+                                            title="Dismiss"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                    <p className="text-[11px] text-zinc-400 font-manrope leading-relaxed line-clamp-4 mb-3">
+                                        {enhancedIdeaOutput.slice(0, 280)}{enhancedIdeaOutput.length > 280 ? "..." : ""}
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => { setIdea(enhancedIdeaOutput); clearEnhance(); setShowEnhancePreview(false); }}
+                                            className="flex-1 py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-manrope font-medium hover:bg-purple-500/30 transition-all"
+                                        >
+                                            Apply Enhancement
+                                        </button>
+                                        <button
+                                            onClick={() => { clearEnhance(); setShowEnhancePreview(false); }}
+                                            className="px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.08] text-zinc-400 text-xs font-manrope hover:text-white transition-colors"
+                                        >
+                                            Dismiss
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -580,11 +622,6 @@ export default function ProjectArchitect() {
                                                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 hover:bg-purple-500/20 text-xs font-manrope transition-all font-medium">
                                                             <Download className="w-3.5 h-3.5" /> Download (.md)
                                                         </button>
-                                                        <button onClick={handleSave} disabled={saving || !!savedProjectId}
-                                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 hover:bg-purple-500/20 text-xs font-manrope transition-all font-medium disabled:opacity-60">
-                                                            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                                                            {savedProjectId ? "Saved!" : saving ? "Saving..." : "Save Project"}
-                                                        </button>
                                                     </div>
                                                 </div>
                                                 <div className="p-5 rounded-xl border border-white/[0.05] bg-black/20">
@@ -607,11 +644,6 @@ export default function ProjectArchitect() {
                                                         <button onClick={() => handleDownloadTab(prompt1, "prompt1_planning.txt")}
                                                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 hover:bg-purple-500/20 text-xs font-manrope transition-all font-medium">
                                                             <Download className="w-3.5 h-3.5" /> Download (.txt)
-                                                        </button>
-                                                        <button onClick={handleSave} disabled={saving || !!savedProjectId}
-                                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 hover:bg-purple-500/20 text-xs font-manrope transition-all font-medium disabled:opacity-60">
-                                                            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                                                            {savedProjectId ? "Saved!" : saving ? "Saving..." : "Save Project"}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -636,11 +668,6 @@ export default function ProjectArchitect() {
                                                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20 text-xs font-manrope transition-all font-medium">
                                                             <Download className="w-3.5 h-3.5" /> Download (.txt)
                                                         </button>
-                                                        <button onClick={handleSave} disabled={saving || !!savedProjectId}
-                                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 hover:bg-cyan-500/20 text-xs font-manrope transition-all font-medium disabled:opacity-60">
-                                                            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                                                            {savedProjectId ? "Saved!" : saving ? "Saving..." : "Save Project"}
-                                                        </button>
                                                     </div>
                                                 </div>
                                                 <div className="p-5 rounded-xl border border-white/[0.05] bg-black/20 font-mono text-zinc-400 text-xs whitespace-pre-wrap select-all selection:bg-cyan-500/30 leading-relaxed max-h-[500px] overflow-y-auto scrollbar-ghost">
@@ -663,11 +690,6 @@ export default function ProjectArchitect() {
                                                         <button onClick={() => handleDownloadTab(prompt3, "prompt3_optimize.txt")}
                                                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 text-xs font-manrope transition-all font-medium">
                                                             <Download className="w-3.5 h-3.5" /> Download (.txt)
-                                                        </button>
-                                                        <button onClick={handleSave} disabled={saving || !!savedProjectId}
-                                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 text-xs font-manrope transition-all font-medium disabled:opacity-60">
-                                                            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                                                            {savedProjectId ? "Saved!" : saving ? "Saving..." : "Save Project"}
                                                         </button>
                                                     </div>
                                                 </div>

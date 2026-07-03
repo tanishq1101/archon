@@ -56,11 +56,11 @@ struct_logger = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await fetch_clerk_keys()
-    logger.info("GhostBoard AI backend started")
+    logger.info("Archon AI backend started")
     yield
 
 # Initialize FastAPI
-app = FastAPI(title="GhostBoard AI API", docs_url="/api/docs", lifespan=lifespan)
+app = FastAPI(title="Archon AI API", docs_url="/api/docs", lifespan=lifespan)
 
 # Register rate limiter with state
 app.state.limiter = limiter
@@ -68,10 +68,10 @@ app.state.limiter = limiter
 # ========== CORS CONFIGURATION ==========
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "development")
 if ENVIRONMENT == "production":
-    allow_origins = ["https://ghostboard.ai"]
+    allow_origins = ["https://archon.ai"]
 else:
     allow_origins = [
-        "https://ghostboard.ai",
+        "https://archon.ai",
         "http://localhost:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3000",

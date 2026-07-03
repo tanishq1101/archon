@@ -66,7 +66,7 @@ export default function AuthPage() {
                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-cyan-400 flex items-center justify-center shadow-[0_0_20px_rgba(139,92,246,0.4)]">
                         <Sparkles className="w-5 h-5 text-white" />
                     </div>
-                    <span className="font-outfit font-semibold text-white text-xl">SpectreFlow AI</span>
+                    <span className="font-outfit font-semibold text-white text-xl">Archon AI</span>
                 </Link>
 
                 <motion.div 

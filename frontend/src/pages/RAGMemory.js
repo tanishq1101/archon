@@ -296,7 +296,7 @@ export default function RAGMemory() {
 
     // Onboarding guide banner state
     const [showOnboarding, setShowOnboarding] = useState(() => {
-        return localStorage.getItem("ghostboard_memory_onboarding_dismissed") !== "true";
+        return localStorage.getItem("archon_memory_onboarding_dismissed") !== "true";
     });
 
     // Add doc modal
@@ -318,7 +318,7 @@ export default function RAGMemory() {
     const previewTimerRef = useRef(null);
 
     const handleDismissOnboarding = () => {
-        localStorage.setItem("ghostboard_memory_onboarding_dismissed", "true");
+        localStorage.setItem("archon_memory_onboarding_dismissed", "true");
         setShowOnboarding(false);
     };
 

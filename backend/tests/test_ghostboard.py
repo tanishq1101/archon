@@ -1,9 +1,9 @@
-"""Backend tests for GhostBoard AI — auth-migration guards, memory search, stats.
+"""Backend tests for Archon AI — auth-migration guards, memory search, stats.
 
 These complement test_clerk_supabase.py (CRUD coverage). They run against a live
 server at BASE_URL using the non-production `mock_test_token` shortcut.
 
-    REACT_APP_BACKEND_URL=http://localhost:8000 pytest backend/tests/test_ghostboard.py
+    REACT_APP_BACKEND_URL=http://localhost:8000 pytest backend/tests/test_archon.py
 """
 import os
 import pytest
@@ -76,7 +76,7 @@ class TestProjects:
 
 class TestMemory:
     def test_search_and_context(self):
-        payload = {"title": "TEST_SearchDoc", "content": "ghostboard architecture microservices design"}
+        payload = {"title": "TEST_SearchDoc", "content": "archon architecture microservices design"}
         doc_id = requests.post(f"{BASE_URL}/api/memory", json=payload, headers=TEST_HEADERS).json()["id"]
         try:
             search_resp = requests.post(f"{BASE_URL}/api/memory/search", json={"query": "microservices"}, headers=TEST_HEADERS)
