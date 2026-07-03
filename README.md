@@ -1,6 +1,6 @@
-# GhostBoard AI
+# Archon AI
 
-GhostBoard AI is a functional, beautiful, and secure AI-powered SaaS for developer project blueprinting, agile sprint ticket breakdown (with interactive Kanban), expert CTO advisory, and context-grounded RAG memory.
+Archon AI is a functional, beautiful, and secure AI-powered SaaS for developer project blueprinting, agile sprint ticket breakdown (with interactive Kanban), expert CTO advisory, and context-grounded RAG memory.
 
 Built with a FastAPI backend, a React frontend, Clerk authentication, Supabase data persistence, and OpenRouter LLM streaming.
 
