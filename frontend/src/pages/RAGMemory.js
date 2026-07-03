@@ -293,6 +293,7 @@ export default function RAGMemory() {
     const [searchResults, setSearchResults] = useState(null);
     const [expandedId, setExpandedId] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
+    const [mobileTab, setMobileTab] = useState("query");
 
     // Onboarding guide banner state
     const [showOnboarding, setShowOnboarding] = useState(() => {
@@ -607,13 +608,37 @@ export default function RAGMemory() {
                     )}
                 </AnimatePresence>
 
+                {/* Mobile Tabs */}
+                <div className="flex lg:hidden p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] mb-6">
+                    <button
+                        onClick={() => setMobileTab("query")}
+                        className={`flex-1 py-2 rounded-lg text-xs font-manrope font-semibold transition-all ${
+                            mobileTab === "query"
+                                ? "bg-gradient-to-r from-violet-600/70 to-fuchsia-600/70 text-white"
+                                : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                    >
+                        Query Console
+                    </button>
+                    <button
+                        onClick={() => setMobileTab("docs")}
+                        className={`flex-1 py-2 rounded-lg text-xs font-manrope font-semibold transition-all ${
+                            mobileTab === "docs"
+                                ? "bg-gradient-to-r from-violet-600/70 to-fuchsia-600/70 text-white"
+                                : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                    >
+                        Docs Library ({stats.total})
+                    </button>
+                </div>
+
                 {/* ─── Main Grid ─── */}
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
                     {/* Left: Document Library */}
                     <motion.div
                         initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
-                        className="lg:col-span-2 flex flex-col gap-3"
+                        className={`lg:col-span-2 flex-col gap-3 ${mobileTab === "docs" ? "flex" : "hidden lg:flex"}`}
                     >
                         {/* Search bar */}
                         <div className="flex items-center gap-2">
@@ -729,7 +754,7 @@ export default function RAGMemory() {
                     {/* Right: Query Console */}
                     <motion.div
                         initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}
-                        className="lg:col-span-3 flex flex-col gap-4"
+                        className={`lg:col-span-3 flex-col gap-4 ${mobileTab === "query" ? "flex" : "hidden lg:flex"}`}
                     >
                         {/* Query input */}
                         <div className="p-5 rounded-2xl bg-white/[0.03] border border-white/[0.08]">

@@ -100,7 +100,7 @@ export default function Dashboard() {
 
                 {/* Stats */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-                    className="grid grid-cols-3 gap-4 mb-10">
+                    className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
                     {statCards.map((s, i) => (
                         <motion.div key={i} data-testid={`stat-card-${s.label.toLowerCase().replace(/\s/g, "-")}`}
                             initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}

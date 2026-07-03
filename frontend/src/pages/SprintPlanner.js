@@ -164,7 +164,7 @@ function KanbanColumn({ col, tasks, isDragOver, onDragOver, onDragLeave, onDrop,
             onDragOver={(e) => { e.preventDefault(); onDragOver(col.id); }}
             onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) onDragLeave(); }}
             onDrop={(e) => { e.preventDefault(); onDrop(col.id); }}
-            className={`flex flex-col rounded-2xl border transition-all duration-200 ${col.colClass} ${isDragOver ? "bg-purple-500/[0.06] ring-1 ring-purple-500/30 border-purple-500/30" : "bg-white/[0.02]"}`}
+            className={`flex flex-col rounded-2xl border transition-all duration-200 ${col.colClass} ${isDragOver ? "bg-purple-500/[0.06] ring-1 ring-purple-500/30 border-purple-500/30" : "bg-white/[0.02]"} w-[280px] xs:w-[320px] sm:w-[380px] lg:w-auto flex-shrink-0 snap-align-start snap-always`}
             data-testid={`column-${col.id}`}
         >
             {/* Column Header */}
@@ -819,7 +819,7 @@ export default function SprintPlanner() {
                     </motion.div>
                 ) : (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="kanban-board">
+                        className="flex lg:grid lg:grid-cols-4 overflow-x-auto lg:overflow-x-visible snap-x snap-mandatory gap-4 pb-4 scrollbar-ghost -mx-4 px-4 sm:mx-0 sm:px-0" data-testid="kanban-board">
                         {COLUMNS.map((col) => (
                             <KanbanColumn
                                 key={col.id}
@@ -839,7 +839,7 @@ export default function SprintPlanner() {
 
                 {/* Pagination Controls */}
                 {tasks.length > 0 && (
-                    <div className="flex items-center justify-center gap-4 mt-8 font-manrope">
+                    <div className="flex flex-wrap items-center justify-center gap-4 mt-8 font-manrope">
                         <button
                             disabled={page === 1}
                             onClick={() => setPage(p => Math.max(1, p - 1))}

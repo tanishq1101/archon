@@ -300,6 +300,15 @@ export default function ProjectArchitect() {
             prompt2: false,
             prompt3: false
         };
+
+        // Scroll to output panel on mobile
+        setTimeout(() => {
+            const outputEl = document.getElementById("blueprint-output-panel");
+            if (outputEl) {
+                outputEl.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        }, 100);
+
         const finalOutput = await stream("/ai/architect", { idea, tech_preferences: techPrefs, team_size: teamSize, timeline });
         if (finalOutput && !finalOutput.includes("Error:") && !finalOutput.includes("Stream error:")) {
             await autoSaveProject(finalOutput);
@@ -569,8 +578,8 @@ export default function ProjectArchitect() {
                     </motion.div>
 
                     {/* Output Panel */}
-                    <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.2 }} className="lg:col-span-3 flex flex-col">
+                    <motion.div id="blueprint-output-panel" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2 }} className="lg:col-span-3 flex flex-col scroll-mt-20">
                         <div className="flex-1 rounded-2xl glass-card flex flex-col min-h-[500px]">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border-b border-white/[0.07] gap-3">
                                 <div className="flex items-center gap-2">

@@ -98,6 +98,27 @@ export default function Navbar() {
                             {label}
                         </Link>
                     ))}
+                    {/* User profile inside drawer on mobile */}
+                    {user && (
+                        <div className="pt-4 mt-3 border-t border-white/[0.06] space-y-3">
+                            <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-cyan-400 flex items-center justify-center text-sm text-white font-medium shadow-[0_0_10px_rgba(139,92,246,0.3)]">
+                                    {user?.name?.[0]?.toUpperCase() || "U"}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-white text-sm font-medium font-outfit truncate">{user?.name}</p>
+                                    <p className="text-zinc-500 text-[11px] font-manrope truncate">{user?.email}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => { setMobileOpen(false); handleLogout(); }}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-manrope text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"
+                            >
+                                <LogOut className="w-4 h-4" />
+                                Log Out
+                            </button>
+                        </div>
+                    )}
                 </motion.div>
             )}
         </nav>

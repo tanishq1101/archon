@@ -21,7 +21,9 @@ import {
     Layers,
     MessageSquare,
     HelpCircle,
-    Zap
+    Zap,
+    Menu,
+    X
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import AnimatedBackground from "@/components/AnimatedBackground";
@@ -194,6 +196,7 @@ export default function LandingPage() {
     const navigate = useNavigate();
     const { theme, setTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
+    const [mobileOpen, setMobileOpen] = useState(false);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [autoplay, setAutoplay] = useState(true);
     const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
@@ -425,23 +428,71 @@ export default function LandingPage() {
                             )}
                         </button>
 
-                        {user ? (
-                            <Link to="/dashboard" data-testid="go-to-dashboard-btn" className="btn-primary text-sm">
-                                Dashboard
-                            </Link>
-                        ) : (
-                            <>
-                                <Link to="/auth" data-testid="sign-in-btn" className="font-manrope text-sm text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors px-3 py-2">
-                                    Sign In
+                        {/* Desktop actions */}
+                        <div className="hidden md:flex items-center gap-4">
+                            {user ? (
+                                <Link to="/dashboard" data-testid="go-to-dashboard-btn" className="btn-primary text-sm">
+                                    Dashboard
                                 </Link>
-                                <Link to="/auth?mode=register" data-testid="get-started-btn" className="btn-primary text-sm">
-                                    Get Started
-                                </Link>
-                            </>
-                        )}
+                            ) : (
+                                <>
+                                    <Link to="/auth" data-testid="sign-in-btn" className="font-manrope text-sm text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors px-3 py-2">
+                                        Sign In
+                                    </Link>
+                                    <Link to="/auth?mode=register" data-testid="get-started-btn" className="btn-primary text-sm">
+                                        Get Started
+                                    </Link>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Mobile menu toggle */}
+                        <button 
+                            className="md:hidden p-2 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/[0.08]"
+                            onClick={() => setMobileOpen(!mobileOpen)}
+                            aria-label="Toggle mobile menu"
+                        >
+                            {mobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                        </button>
                     </div>
                 </div>
             </nav>
+
+            {/* Mobile Nav Drawer */}
+            <AnimatePresence>
+                {mobileOpen && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: -10 }} 
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="md:hidden fixed top-16 left-0 right-0 z-50 border-b border-zinc-200/50 dark:border-white/[0.06] px-6 py-4 space-y-4 bg-white/95 dark:bg-[#0A0A0C]/95 backdrop-blur-xl shadow-lg"
+                    >
+                        <div className="flex flex-col gap-1">
+                            <a href="#about" onClick={(e) => { setMobileOpen(false); smoothScroll(e, "about"); }} className="font-manrope text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors py-2 border-b border-zinc-100 dark:border-white/5">About</a>
+                            <a href="#features" onClick={(e) => { setMobileOpen(false); smoothScroll(e, "features"); }} className="font-manrope text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors py-2 border-b border-zinc-100 dark:border-white/5">Features</a>
+                            <a href="#how-it-works" onClick={(e) => { setMobileOpen(false); smoothScroll(e, "how-it-works"); }} className="font-manrope text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors py-2 border-b border-zinc-100 dark:border-white/5">How it Works</a>
+                            <a href="#testimonials" onClick={(e) => { setMobileOpen(false); smoothScroll(e, "testimonials"); }} className="font-manrope text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors py-2 border-b border-zinc-100 dark:border-white/5">Testimonials</a>
+                            <a href="#faq" onClick={(e) => { setMobileOpen(false); smoothScroll(e, "faq"); }} className="font-manrope text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors py-2 border-b border-zinc-100 dark:border-white/5">FAQ</a>
+                        </div>
+                        <div className="pt-2 flex flex-col gap-3">
+                            {user ? (
+                                <Link to="/dashboard" onClick={() => setMobileOpen(false)} className="btn-primary text-sm text-center py-3">
+                                    Dashboard
+                                </Link>
+                            ) : (
+                                <>
+                                    <Link to="/auth" onClick={() => setMobileOpen(false)} className="font-manrope text-sm text-center text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors py-2.5 rounded-xl border border-zinc-200 dark:border-white/10">
+                                        Sign In
+                                    </Link>
+                                    <Link to="/auth?mode=register" onClick={() => setMobileOpen(false)} className="btn-primary text-sm text-center py-3">
+                                        Get Started
+                                    </Link>
+                                </>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Hero Section */}
             <section className="relative min-h-screen flex items-center justify-center px-6 pt-16 overflow-hidden">

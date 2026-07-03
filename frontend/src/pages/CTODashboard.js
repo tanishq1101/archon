@@ -90,6 +90,7 @@ export default function CTODashboard() {
     const [techStack, setTechStack] = useState(() => localStorage.getItem("archon_cto_techStack") || "");
     const [copied, setCopied] = useState(false);
     const [history, setHistory] = useState([]);
+    const [mobileTab, setMobileTab] = useState("console");
     const outputRef = useRef(null);
     const textareaRef = useRef(null);
 
@@ -199,10 +200,34 @@ export default function CTODashboard() {
                     </div>
                 </motion.div>
 
+                {/* Mobile Tabs */}
+                <div className="flex lg:hidden p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] mb-6">
+                    <button
+                        onClick={() => setMobileTab("console")}
+                        className={`flex-1 py-2 rounded-lg text-xs font-manrope font-semibold transition-all ${
+                            mobileTab === "console"
+                                            ? "bg-gradient-to-r from-cyan-500/70 to-blue-500/70 text-white"
+                                : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                    >
+                        CTO Console
+                    </button>
+                    <button
+                        onClick={() => setMobileTab("settings")}
+                        className={`flex-1 py-2 rounded-lg text-xs font-manrope font-semibold transition-all ${
+                            mobileTab === "settings"
+                                            ? "bg-gradient-to-r from-cyan-500/70 to-blue-500/70 text-white"
+                                : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                    >
+                        Console Settings & Presets
+                    </button>
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                     {/* Input Panel */}
                     <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.1 }} className="lg:col-span-1 space-y-4">
+                        transition={{ delay: 0.1 }} className={`lg:col-span-1 space-y-4 ${mobileTab === "settings" ? "block" : "hidden lg:block"}`}>
                         {/* Context Project */}
                         <div className="p-4 rounded-2xl glass-card">
                             <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-2">Context Project</label>
@@ -253,7 +278,7 @@ export default function CTODashboard() {
                             <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-3">Quick Questions</label>
                             <div className="space-y-1.5">
                                 {presets.slice(0, 4).map((preset, i) => (
-                                    <button key={i} onClick={() => setQuestion(preset)} data-testid={`preset-${i}`}
+                                    <button key={i} onClick={() => { setQuestion(preset); setMobileTab("console"); }} data-testid={`preset-${i}`}
                                         className="w-full text-left px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.05] text-zinc-400 hover:text-white hover:bg-white/[0.06] text-xs font-manrope transition-all line-clamp-2">
                                         {preset.slice(0, 60)}...
                                     </button>
@@ -267,7 +292,7 @@ export default function CTODashboard() {
                                 <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-3">Recent</label>
                                 <div className="space-y-2">
                                     {history.slice(0, 5).map((h, i) => (
-                                        <button key={i} onClick={() => setQuestion(h.question)}
+                                        <button key={i} onClick={() => { setQuestion(h.question); setMobileTab("console"); }}
                                             className="w-full text-left px-2 py-1.5 rounded text-zinc-500 hover:text-zinc-300 text-xs font-manrope transition-colors line-clamp-1">
                                             <ChevronRight className="inline w-3 h-3 mr-1" />
                                             {h.question.slice(0, 50)}...
@@ -280,7 +305,7 @@ export default function CTODashboard() {
 
                     {/* Main Panel */}
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }} className="lg:col-span-3 flex flex-col gap-4">
+                        transition={{ delay: 0.2 }} className={`lg:col-span-3 flex flex-col gap-4 ${mobileTab === "console" ? "flex" : "hidden lg:flex"}`}>
                         {/* Question Input */}
                         <div className="p-5 rounded-2xl glass-card">
                             <label className="block text-xs font-manrope tracking-[0.15em] uppercase text-zinc-500 mb-3">
